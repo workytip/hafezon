@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* تصميم إسلامي - ألوان خضراء وذهبية مع خلفية كريمية */
+
+@layer base {
+  :root {
+    /* الخلفية الكريمية الدافئة */
+    --background: 40 30% 96%;
+    --foreground: 160 40% 15%;
+
+    /* البطاقات */
+    --card: 40 35% 98%;
+    --card-foreground: 160 40% 15%;
+
+    /* القوائم المنبثقة */
+    --popover: 40 35% 98%;
+    --popover-foreground: 160 40% 15%;
+
+    /* اللون الأساسي - أخضر زمردي داكن */
+    --primary: 158 45% 25%;
+    --primary-foreground: 40 30% 96%;
+
+    /* اللون الثانوي - ذهبي */
+    --secondary: 43 75% 55%;
+    --secondary-foreground: 160 40% 15%;
+
+    /* اللون الخافت */
+    --muted: 40 20% 90%;
+    --muted-foreground: 160 20% 45%;
+
+    /* اللون المميز - أخضر فاتح */
+    --accent: 158 35% 90%;
+    --accent-foreground: 158 45% 20%;
+
+    /* لون التحذير */
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 40 30% 96%;
+
+    /* الحدود والإدخال */
+    --border: 158 20% 85%;
+    --input: 158 20% 85%;
+    --ring: 158 45% 35%;
+
+    --radius: 0.75rem;
+
+    /* ألوان إضافية للتطبيق */
+    --gold: 43 85% 55%;
+    --gold-light: 43 70% 75%;
+    --emerald: 158 45% 35%;
+    --emerald-light: 158 35% 85%;
+    --cream: 40 30% 96%;
+    --cream-dark: 40 20% 88%;
+
+    /* التدرجات */
+    --gradient-primary: linear-gradient(135deg, hsl(158 45% 25%) 0%, hsl(158 45% 35%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(43 85% 55%) 0%, hsl(43 75% 65%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(40 35% 98%) 0%, hsl(40 30% 95%) 100%);
+
+    /* الظلال */
+    --shadow-soft: 0 4px 20px -4px hsl(158 45% 25% / 0.15);
+    --shadow-gold: 0 4px 20px -4px hsl(43 85% 55% / 0.3);
+
+    --sidebar-background: 40 30% 96%;
+    --sidebar-foreground: 160 40% 15%;
+    --sidebar-primary: 158 45% 25%;
+    --sidebar-primary-foreground: 40 30% 96%;
+    --sidebar-accent: 158 35% 90%;
+    --sidebar-accent-foreground: 158 45% 20%;
+    --sidebar-border: 158 20% 85%;
+    --sidebar-ring: 158 45% 35%;
+  }
+
+  .dark {
+    --background: 160 30% 8%;
+    --foreground: 40 30% 96%;
+
+    --card: 160 25% 12%;
+    --card-foreground: 40 30% 96%;
+
+    --popover: 160 25% 12%;
+    --popover-foreground: 40 30% 96%;
+
+    --primary: 158 45% 45%;
+    --primary-foreground: 160 30% 8%;
+
+    --secondary: 43 75% 50%;
+    --secondary-foreground: 160 30% 8%;
+
+    --muted: 160 20% 18%;
+    --muted-foreground: 40 20% 65%;
+
+    --accent: 158 35% 20%;
+    --accent-foreground: 158 45% 80%;
+
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 40 30% 96%;
+
+    --border: 160 20% 20%;
+    --input: 160 20% 20%;
+    --ring: 158 45% 50%;
+
+    --gold: 43 85% 50%;
+    --gold-light: 43 70% 35%;
+    --emerald: 158 45% 45%;
+    --emerald-light: 158 35% 25%;
+    --cream: 160 30% 8%;
+    --cream-dark: 160 25% 12%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(158 45% 35%) 0%, hsl(158 45% 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(43 85% 50%) 0%, hsl(43 75% 60%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(160 25% 12%) 0%, hsl(160 25% 15%) 100%);
+
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.4);
+    --shadow-gold: 0 4px 20px -4px hsl(43 85% 50% / 0.2);
+
+    --sidebar-background: 160 30% 8%;
+    --sidebar-foreground: 40 30% 96%;
+    --sidebar-primary: 158 45% 45%;
+    --sidebar-primary-foreground: 160 30% 8%;
+    --sidebar-accent: 158 35% 20%;
+    --sidebar-accent-foreground: 158 45% 80%;
+    --sidebar-border: 160 20% 20%;
+    --sidebar-ring: 158 45% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-amiri;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-amiri font-bold;
+  }
+}
+
+@layer components {
+  .islamic-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30L30 0z' fill='%23228B7A' fill-opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  .card-islamic {
+    @apply bg-card rounded-xl border border-border shadow-[var(--shadow-soft)] backdrop-blur-sm;
+    background: var(--gradient-card);
+  }
+
+  .btn-primary-islamic {
+    @apply bg-primary text-primary-foreground hover:opacity-90 transition-all duration-300;
+    background: var(--gradient-primary);
+  }
+
+  .btn-gold {
+    @apply text-foreground hover:opacity-90 transition-all duration-300;
+    background: var(--gradient-gold);
+  }
+
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+
+  .bg-gold {
+    background-color: hsl(var(--gold));
+  }
+
+  .border-gold {
+    border-color: hsl(var(--gold));
+  }
+
+  .glow-emerald {
+    box-shadow: 0 0 30px hsl(158 45% 35% / 0.2);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 30px hsl(43 85% 55% / 0.3);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+
+  @keyframes scaleIn {
+    from { 
+      opacity: 0; 
+      transform: scale(0.95); 
+    }
+    to { 
+      opacity: 1; 
+      transform: scale(1); 
+    }
+  }
+}
