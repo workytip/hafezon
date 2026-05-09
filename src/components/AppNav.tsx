@@ -10,25 +10,36 @@ const NAV_ITEMS = [
   { to: '/contact',      icon: MessageSquare, label: 'تواصل' },
 ] as const;
 
-/** Horizontal nav row for page headers — shown only on md+ screens */
+/** Fixed top navbar — shown only on md+ screens */
 export function NavLinks() {
   const { pathname } = useLocation();
   return (
-    <div className="hidden md:flex items-center gap-2 flex-wrap justify-center mb-4" dir="rtl">
-      {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
-        <Link key={to} to={to}>
-          <div className={cn(
-            'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-            pathname === to
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary'
-          )}>
-            <Icon className="h-4 w-4" />
-            {label}
-          </div>
+    <nav
+      className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border"
+      dir="rtl"
+    >
+      <div className="w-full max-w-6xl mx-auto flex items-center justify-between px-6 h-14">
+        <Link to="/" className="flex items-center gap-2 shrink-0">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <span className="font-bold text-primary text-base">حافظون</span>
         </Link>
-      ))}
-    </div>
+        <div className="flex items-center gap-1.5">
+          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+            <Link key={to} to={to}>
+              <div className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                pathname === to
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'hover:bg-primary/10 text-muted-foreground hover:text-primary'
+              )}>
+                <Icon className="h-4 w-4" />
+                {label}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </nav>
   );
 }
 

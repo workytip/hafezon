@@ -8,7 +8,6 @@ import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDailyMuslimStorage } from '@/hooks/useDailyMuslimStorage';
 import { useSoundSystem, SoundMode, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
-import { NavLinks } from '@/components/AppNav';
 import { PomodoroMode, PomodoroSettings, DEFAULT_POMODORO_SETTINGS } from '@/types/pomodoro';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -197,7 +196,6 @@ export default function Pomodoro() {
             >
               <Settings2 className="h-5 w-5" />
             </button>
-            <NavLinks />
           </div>
 
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-3 glow-emerald">

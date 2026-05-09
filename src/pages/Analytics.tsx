@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { NavLinks } from '@/components/AppNav';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -170,7 +169,6 @@ export default function Analytics() {
 
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in">
-          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-3 glow-emerald">
             <TrendingUp className="h-10 w-10 text-primary" />
           </div>

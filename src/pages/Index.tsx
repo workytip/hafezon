@@ -6,10 +6,8 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { UserSettings, DailyTask } from '@/types/schedule';
 import { generateDailyTasks } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BookOpen, RotateCcw, Zap, Sparkles, ChevronLeft, Sun, Timer, TrendingUp } from 'lucide-react';
-import { NavLinks } from '@/components/AppNav';
+import { BookOpen, RotateCcw, Zap, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 
 const Index = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -65,7 +63,6 @@ const Index = () => {
             <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">Hafezon</p>
             <h1 className="text-5xl md:text-6xl font-bold text-primary">حافظون</h1>
           </div>
-          <NavLinks />
           <div className="mt-6 inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <BookOpen className="h-12 w-12 text-primary" />
           </div>
@@ -75,38 +72,6 @@ const Index = () => {
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             نظّم حفظك للقرآن الكريم ومراجعتك اليومية بطريقة منهجية ومتابعة دورية
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/daily-muslim">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
-                <Sun className="h-6 w-6 text-primary" />
-                <div className="text-right">
-                  <span className="font-bold text-foreground block">☀️ متتبع يوم المسلم</span>
-                  <span className="text-xs text-muted-foreground">جدول يومي حول أوقات الصلاة</span>
-                </div>
-                <ChevronLeft className="h-5 w-5 text-primary" />
-              </div>
-            </Link>
-            <Link to="/pomodoro">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
-                <Timer className="h-6 w-6 text-primary" />
-                <div className="text-right">
-                  <span className="font-bold text-foreground block">🍅 مؤقت بومودورو</span>
-                  <span className="text-xs text-muted-foreground">ركّز على أهدافك بجلسات منتجة</span>
-                </div>
-                <ChevronLeft className="h-5 w-5 text-primary" />
-              </div>
-            </Link>
-            <Link to="/analytics">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
-                <TrendingUp className="h-6 w-6 text-primary" />
-                <div className="text-right">
-                  <span className="font-bold text-foreground block">📊 التحليلات</span>
-                  <span className="text-xs text-muted-foreground">تتبع تقدمك وإنتاجيتك عبر الوقت</span>
-                </div>
-                <ChevronLeft className="h-5 w-5 text-primary" />
-              </div>
-            </Link>
-          </div>
         </header>
 
         {/* المحتوى الرئيسي */}

@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PomodoroProvider } from "./contexts/PomodoroContext";
-import { AppNav } from "./components/AppNav";
+import { AppNav, NavLinks } from "./components/AppNav";
 import { InstallPWA } from "./components/InstallPWA";
 import Index from "./pages/Index";
 import Ramadan from "./pages/Ramadan";
@@ -23,7 +23,8 @@ const App = () => (
       <Sonner />
       <PomodoroProvider>
       <BrowserRouter basename="/hafezon">
-        <div className="pb-20 md:pb-0">
+        <NavLinks />
+        <div className="pb-20 md:pb-0 md:pt-14">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/ramadan" element={<Ramadan />} />

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, MessageSquare, Mail, Lightbulb, Loader2 } from 'lucide-react';
-import { NavLinks } from '@/components/AppNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,7 +57,6 @@ const Contact = () => {
       <div className="container max-w-2xl py-8 px-4">
         {/* رأس الصفحة */}
         <header className="text-center mb-10 animate-fade-in">
-          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <MessageSquare className="h-12 w-12 text-primary" />
           </div>

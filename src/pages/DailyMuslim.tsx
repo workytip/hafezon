@@ -20,7 +20,6 @@ import {
 } from '@/types/dailyMuslim';
 import { DailyMuslimExportTable } from '@/components/DailyMuslimExportTable';
 import { MiniPomodoro } from '@/components/MiniPomodoro';
-import { NavLinks } from '@/components/AppNav';
 
 const toDateKey = (d: Date) => {
   const y = d.getFullYear();
@@ -208,7 +207,6 @@ const DailyMuslim = () => {
     <div className="min-h-screen bg-background islamic-pattern">
       <div className="container max-w-6xl py-8 px-4 relative">
         <header className="text-center mb-8 animate-fade-in">
-          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <Sun className="h-12 w-12 text-primary" />
           </div>
