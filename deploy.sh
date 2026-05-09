@@ -5,6 +5,7 @@ echo "Building..."
 node node_modules/vite/bin/vite.js build
 
 echo "Deploying to gh-pages..."
+rm -rf dist/.git
 cd dist
 touch .nojekyll
 git init -q
