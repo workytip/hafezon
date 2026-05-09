@@ -14,6 +14,7 @@ export interface PrayerSection {
 
 export const PRAYER_SECTIONS: PrayerSection[] = [
   { id: 'fajr', name: 'بعد صلاة الفجر', icon: '🌅' },
+  { id: 'duha', name: 'صلاة الضحى', icon: '🌤️' },
   { id: 'dhuhr', name: 'بعد صلاة الظهر', icon: '☀️' },
   { id: 'asr', name: 'بعد صلاة العصر', icon: '🌇' },
   { id: 'maghrib', name: 'بعد صلاة المغرب', icon: '🌆' },
@@ -42,6 +43,9 @@ export const DEFAULT_DAILY_GOALS: Omit<DailyMuslimGoal, 'order'>[] = [
   { id: 'def-morning-adhkar', label: 'أذكار الصباح', icon: '📿', sectionId: 'fajr' },
   { id: 'def-quran-wird', label: 'ورد القرآن', icon: '📖', sectionId: 'fajr' },
   { id: 'def-fajr-sunnah', label: 'سنة الفجر', icon: '🤲', sectionId: 'fajr' },
+  // الضحى
+  { id: 'def-duha-prayer', label: 'صلاة الضحى', icon: '🌤️', sectionId: 'duha' },
+  { id: 'def-duha-dhikr', label: 'أذكار الضحى', icon: '📿', sectionId: 'duha' },
   // الظهر
   { id: 'def-dhuhr-prayer', label: 'صلاة الظهر في وقتها', icon: '🕌', sectionId: 'dhuhr' },
   { id: 'def-dhuhr-sunnah', label: 'السنن الرواتب', icon: '🤲', sectionId: 'dhuhr' },

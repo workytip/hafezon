@@ -388,48 +388,69 @@ const DailyMuslim = () => {
                   <Progress value={dayPct} className="h-2" />
                 </div>
 
-                {/* الأهداف بالأقسام */}
-                {goalsBySection.map(({ section, items }) => {
-                  if (items.length === 0) return null;
-                  const sectionDone = items.filter(g => dayProgress[g.id]).length;
-                  return (
-                    <div key={section.id} className="space-y-2">
-                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
-                        <h3 className="font-bold text-foreground flex items-center gap-2">
-                          <span className="text-xl">{section.icon}</span>
-                          {section.name}
-                        </h3>
-                        <span className="text-xs font-semibold text-primary bg-primary/15 px-2 py-0.5 rounded-full">
-                          {sectionDone}/{items.length}
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {items.map(g => {
-                          const checked = !!dayProgress[g.id];
-                          return (
-                            <div
-                              key={g.id}
-                              className={cn(
-                                'flex items-center gap-3 p-3 rounded-lg border transition-all',
-                                checked ? 'bg-primary/10 border-primary/40' : 'bg-card border-border hover:bg-accent/50'
-                              )}
-                            >
-                              <Checkbox checked={checked} onCheckedChange={() => toggleGoal(g.id)} className="h-5 w-5 cursor-pointer rounded-full" />
-                              <span className="text-xl">{g.icon}</span>
-                              <span
-                                onClick={() => toggleGoal(g.id)}
-                                className={cn('flex-1 text-sm cursor-pointer', checked && 'line-through text-muted-foreground')}
+                {/* الأهداف — شبكة بطاقات (3 في الصف) */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {goalsBySection.map(({ section, items }) => {
+                    if (items.length === 0) return null;
+                    const sectionDone = items.filter(g => dayProgress[g.id]).length;
+                    const allDone = sectionDone === items.length;
+                    return (
+                      <div
+                        key={section.id}
+                        className={cn(
+                          'rounded-2xl border flex flex-col overflow-hidden transition-all',
+                          allDone ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'
+                        )}
+                      >
+                        {/* رأس البطاقة */}
+                        <div className={cn(
+                          'flex items-center justify-between px-4 py-3 border-b',
+                          allDone ? 'bg-primary/10 border-primary/20' : 'bg-muted/40 border-border'
+                        )}>
+                          <div className="flex items-center gap-2 font-bold text-sm">
+                            <span className="text-xl">{section.icon}</span>
+                            {section.name}
+                          </div>
+                          <span className={cn(
+                            'text-xs font-semibold px-2 py-0.5 rounded-full',
+                            allDone ? 'bg-primary text-primary-foreground' : 'bg-primary/15 text-primary'
+                          )}>
+                            {sectionDone}/{items.length}
+                          </span>
+                        </div>
+                        {/* قائمة الأهداف */}
+                        <div className="flex flex-col divide-y divide-border/50 flex-1">
+                          {items.map(g => {
+                            const checked = !!dayProgress[g.id];
+                            return (
+                              <div
+                                key={g.id}
+                                className={cn(
+                                  'flex items-center gap-3 px-4 py-2.5 transition-colors',
+                                  checked ? 'bg-primary/5' : 'hover:bg-accent/40'
+                                )}
                               >
-                                {g.label}
-                              </span>
-                              <MiniPomodoro taskLabel={`${g.icon} ${g.label}`} />
-                            </div>
-                          );
-                        })}
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => toggleGoal(g.id)}
+                                  className="h-4 w-4 cursor-pointer rounded-full shrink-0"
+                                />
+                                <span className="text-base shrink-0">{g.icon}</span>
+                                <span
+                                  onClick={() => toggleGoal(g.id)}
+                                  className={cn('flex-1 text-sm cursor-pointer leading-snug', checked && 'line-through text-muted-foreground')}
+                                >
+                                  {g.label}
+                                </span>
+                                <MiniPomodoro taskLabel={`${g.icon} ${g.label}`} />
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
                 {goals.length === 0 && (
                   <div className="text-center py-10 space-y-3">
