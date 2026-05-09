@@ -1,14 +1,26 @@
 import { useState, useEffect, useRef, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { Timer, Play, Pause, RotateCcw, X, Check, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePomodoroContext } from '@/contexts/PomodoroContext';
 import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
-import { useSoundSystem, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
+import { useSoundSystem, SoundMode, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const DURATIONS = [5, 10, 15, 25];
-const CIRCLE_R = 80;
+const CIRCLE_R = 120;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
+
+// Read fresh from localStorage every call — never stale
+const getSoundMode = (): SoundMode =>
+  (localStorage.getItem('pomodoro-sound') as SoundMode) ?? 'tick';
+const getNoiseType = (): NoiseType =>
+  (localStorage.getItem('pomodoro-noise-type') as NoiseType) ?? 'brown';
+
+const SOUND_CYCLE: SoundMode[] = ['off', 'tick', 'noise', 'both'];
+const SOUND_LABELS: Record<SoundMode, string> = {
+  off: '🔇 صامت', tick: '🕐 تيك-توك', noise: '🌊 محيطي', both: '🕐🌊 كلاهما',
+};
 
 interface MiniPomodoroProps {
   taskLabel: string;
@@ -23,11 +35,11 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
 
   const taskSessionCount = sessions.filter(s => s.taskLabel === taskLabel).length;
 
-  const soundMode = localStorage.getItem('pomodoro-sound') ?? 'tick';
-  const soundEnabled = soundMode !== 'off';
-  const noiseType = (localStorage.getItem('pomodoro-noise-type') ?? 'brown') as NoiseType;
+  // local mirror of sound prefs so the overlay re-renders when user cycles
+  const [soundMode, setSoundMode] = useState<SoundMode>(getSoundMode);
+  const [noiseType]  = useState<NoiseType>(getNoiseType);   // picked in full Pomodoro settings
 
-  const [open, setOpen]       = useState(false);
+  const [open, setOpen]         = useState(false);
   const [duration, setDuration] = useState(settings.workDuration);
   const [timeLeft, setTimeLeft] = useState(settings.workDuration * 60);
   const [running, setRunning]   = useState(false);
@@ -41,41 +53,41 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
 
   // cleanup on unmount
   useEffect(() => {
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      stopNoise();
+    };
   }, []);
 
-  // stop if another timer claims the slot
+  // stop if another timer steals the slot
   useEffect(() => {
     if (!isActive && running) { setRunning(false); stopNoise(); }
-  }, [isActive, running]);
+  }, [isActive]);
 
-  // noise on/off with running state
+  // noise lifecycle tied to running state
   useEffect(() => {
-    if (running && (soundMode === 'noise' || soundMode === 'both')) {
-      startNoise(noiseType);
+    const mode = getSoundMode();
+    if (running && (mode === 'noise' || mode === 'both')) {
+      startNoise(getNoiseType());
     } else {
       stopNoise();
     }
-  }, [running, soundMode]);
+  }, [running]);
 
   // countdown
   useEffect(() => {
     if (!running) { if (intervalRef.current) clearInterval(intervalRef.current); return; }
     intervalRef.current = setInterval(() => {
-      if (soundEnabled && (soundMode === 'tick' || soundMode === 'both')) tick();
+      const mode = getSoundMode();
+      if (mode === 'tick' || mode === 'both') tick();
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
-          setRunning(false);
-          setDone(true);
-          release(uid);
-          bell();
-          stopNoise();
-          resetTickCount();
+          setRunning(false); setDone(true);
+          release(uid); bell(); stopNoise(); resetTickCount();
           addSession({
             date: new Date().toISOString().split('T')[0],
-            taskLabel,
-            duration,
+            taskLabel, duration,
             completedAt: new Date().toISOString(),
           });
           return 0;
@@ -86,14 +98,15 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     return () => clearInterval(intervalRef.current!);
   }, [running]);
 
-  // Esc to close overlay
+  // Esc closes overlay
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, [open]);
 
+  // ── handlers ───────────────────────────────────────────────────────────────
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (running) { setRunning(false); release(uid); }
@@ -103,7 +116,7 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const reset = (e: React.MouseEvent) => {
     e.stopPropagation();
     setRunning(false); setDone(false);
-    setTimeLeft(duration * 60); release(uid); resetTickCount();
+    setTimeLeft(duration * 60); release(uid); resetTickCount(); stopNoise();
   };
 
   const setDur = (e: React.MouseEvent, d: number) => {
@@ -112,13 +125,22 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     setDuration(d); setTimeLeft(d * 60); setDone(false);
   };
 
-  const openTimer = (e: React.MouseEvent) => { e.stopPropagation(); setOpen(true); };
-  const closeOverlay = (e: React.MouseEvent) => { e.stopPropagation(); setOpen(false); };
+  const cycleSoundInOverlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = SOUND_CYCLE[(SOUND_CYCLE.indexOf(getSoundMode()) + 1) % SOUND_CYCLE.length];
+    localStorage.setItem('pomodoro-sound', next);
+    setSoundMode(next);
+    // update noise immediately if running
+    if (running) {
+      stopNoise();
+      if (next === 'noise' || next === 'both') setTimeout(() => startNoise(getNoiseType()), 50);
+    }
+  };
 
   // ── collapsed button ───────────────────────────────────────────────────────
   const collapsedBtn = (
     <button
-      onClick={openTimer}
+      onClick={e => { e.stopPropagation(); setOpen(true); }}
       title="ابدأ مؤقت بومودورو"
       className={cn(
         'flex items-center gap-1 p-1 rounded-md transition-colors text-muted-foreground hover:text-primary hover:bg-primary/10',
@@ -133,125 +155,132 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     </button>
   );
 
-  // ── fullscreen overlay ─────────────────────────────────────────────────────
-  const noiseLabel = NOISE_OPTIONS.find(o => o.id === noiseType);
+  // ── fullscreen overlay (via portal so it always covers the entire page) ────
+  const noiseLabel = NOISE_OPTIONS.find(o => o.id === (noiseType ?? getNoiseType()));
+
+  const overlay = open ? createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md"
+      style={{ margin: 0, padding: 0 }}
+      onClick={e => e.stopPropagation()}
+      dir="rtl"
+    >
+      {/* top bar */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4">
+        <button
+          onClick={cycleSoundInOverlay}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm transition-colors"
+          title="تغيير وضع الصوت"
+        >
+          {soundMode === 'off' ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          <span className="text-xs">{SOUND_LABELS[soundMode]}</span>
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); setOpen(false); }}
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+          title="إغلاق (Esc)"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* task name */}
+      <p className="text-white/50 text-sm mb-4 max-w-sm text-center px-8 truncate">{taskLabel}</p>
+
+      {/* duration picker */}
+      {!running && !done && (
+        <div className="flex gap-2 mb-8">
+          {DURATIONS.map(d => (
+            <button
+              key={d}
+              onClick={e => setDur(e, d)}
+              className={cn(
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                d === duration
+                  ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+              )}
+            >
+              {d} د
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* large circle */}
+      <div className="relative mb-10">
+        <svg width="300" height="300" className="-rotate-90">
+          <circle cx="150" cy="150" r={CIRCLE_R}
+            fill="none" stroke="white" strokeWidth="7" opacity="0.1" />
+          <circle cx="150" cy="150" r={CIRCLE_R}
+            fill="none" stroke="hsl(var(--primary))" strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={strokeOffset}
+            style={{ transition: 'stroke-dashoffset 1s linear' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+          {done ? (
+            <>
+              <Check className="h-14 w-14 text-emerald-400" />
+              <span className="text-white text-xl font-bold">أحسنت!</span>
+            </>
+          ) : (
+            <>
+              <span className="text-white font-bold tabular-nums" style={{ fontSize: '4.5rem', lineHeight: 1 }}>
+                {pad(Math.floor(timeLeft / 60))}:{pad(timeLeft % 60)}
+              </span>
+              <span className="text-white/40 text-sm">
+                {running ? '● جاري التركيز' : 'اضغط للبدء'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* session badge */}
+      {taskSessionCount > 0 && (
+        <p className="text-white/30 text-xs mb-6">🍅 {taskSessionCount} جلسة مكتملة لهذه المهمة</p>
+      )}
+
+      {/* controls */}
+      <div className="flex items-center gap-5">
+        <button
+          onClick={reset}
+          className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all"
+        >
+          <RotateCcw className="h-6 w-6" />
+        </button>
+        <button
+          onClick={toggle}
+          className="p-6 rounded-full bg-primary hover:opacity-90 text-primary-foreground shadow-2xl transition-all active:scale-95"
+        >
+          {running
+            ? <Pause className="h-10 w-10" />
+            : <Play className="h-10 w-10 translate-x-0.5" />
+          }
+        </button>
+        <div className="w-14" />
+      </div>
+
+      {/* noise hint */}
+      {(soundMode === 'noise' || soundMode === 'both') && noiseLabel && (
+        <p className="text-white/25 text-xs mt-8">
+          {noiseLabel.icon} {noiseLabel.label}
+        </p>
+      )}
+
+      {/* esc hint */}
+      <p className="absolute bottom-5 text-white/20 text-xs">Esc للخروج</p>
+    </div>,
+    document.body
+  ) : null;
 
   return (
     <>
       {collapsedBtn}
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={e => e.stopPropagation()}
-          dir="rtl"
-        >
-          {/* close */}
-          <button
-            onClick={closeOverlay}
-            className="absolute top-5 left-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            title="إغلاق (Esc)"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {/* task name */}
-          <p className="text-white/60 text-sm mb-2 max-w-xs text-center truncate px-4">{taskLabel}</p>
-
-          {/* duration picker */}
-          {!running && !done && (
-            <div className="flex gap-2 mb-6">
-              {DURATIONS.map(d => (
-                <button
-                  key={d}
-                  onClick={e => setDur(e, d)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                    d === duration
-                      ? 'bg-primary text-primary-foreground shadow-lg'
-                      : 'bg-white/10 text-white/70 hover:bg-white/20'
-                  )}
-                >
-                  {d} د
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* large circle timer */}
-          <div className="relative mb-8">
-            <svg width="220" height="220" className="-rotate-90">
-              <circle cx="110" cy="110" r={CIRCLE_R}
-                fill="none" stroke="white" strokeWidth="6" opacity="0.15" />
-              <circle cx="110" cy="110" r={CIRCLE_R}
-                fill="none" stroke="hsl(var(--primary))" strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={CIRCUMFERENCE}
-                strokeDashoffset={strokeOffset}
-                className="transition-all duration-1000"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {done ? (
-                <>
-                  <Check className="h-12 w-12 text-emerald-400 mb-1" />
-                  <span className="text-white text-lg font-bold">أحسنت!</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-white text-6xl font-bold tabular-nums">
-                    {pad(Math.floor(timeLeft / 60))}:{pad(timeLeft % 60)}
-                  </span>
-                  <span className="text-white/50 text-sm mt-1">
-                    {running ? 'جاري التركيز...' : 'جاهز'}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* session count */}
-          {taskSessionCount > 0 && (
-            <p className="text-white/40 text-xs mb-4">🍅 {taskSessionCount} جلسة مكتملة لهذه المهمة</p>
-          )}
-
-          {/* controls */}
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={reset}
-              className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <RotateCcw className="h-5 w-5" />
-            </button>
-            <button
-              onClick={toggle}
-              className="p-5 rounded-full bg-primary hover:opacity-90 text-primary-foreground shadow-lg transition-all active:scale-95"
-            >
-              {running
-                ? <Pause className="h-8 w-8" />
-                : <Play className="h-8 w-8 translate-x-0.5" />
-              }
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); }}
-              className="p-3 rounded-full bg-white/10 text-white/50 transition-colors cursor-default"
-              title={noiseLabel ? `${noiseLabel.icon} ${noiseLabel.label}` : ''}
-            >
-              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-            </button>
-          </div>
-
-          {/* sound hint */}
-          {soundEnabled && noiseLabel && (soundMode === 'noise' || soundMode === 'both') && (
-            <p className="text-white/30 text-xs mb-2">
-              {noiseLabel.icon} {noiseLabel.label} · يمكن تغييره من إعدادات بومودورو
-            </p>
-          )}
-
-          {/* esc hint */}
-          <p className="text-white/25 text-xs mt-2">اضغط Esc للخروج</p>
-        </div>
-      )}
+      {overlay}
     </>
   );
 }
