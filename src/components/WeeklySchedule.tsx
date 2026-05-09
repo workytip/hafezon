@@ -25,6 +25,7 @@ import jsPDF from 'jspdf';
 import { toast } from 'sonner';
 import { ExportTable } from './ExportTable';
 import { MonthExportTable } from './MonthExportTable';
+import { MiniPomodoro } from './MiniPomodoro';
 
 interface WeeklyScheduleProps {
   tasks: DailyTask[];
@@ -507,16 +508,17 @@ export const WeeklySchedule = ({
                     <TaskItem
                       icon={<BookOpen className="h-4 w-4" />}
                       title="الحفظ الجديد"
-                      description={task.newMemorization.verseRange 
-                        ? task.newMemorization.unitLabel 
+                      description={task.newMemorization.verseRange
+                        ? task.newMemorization.unitLabel
                         : task.newMemorization.unitLabel || `سورة ${task.newMemorization.surahName}`}
-                      subDescription={task.newMemorization.verseRange 
-                        ? task.newMemorization.description 
+                      subDescription={task.newMemorization.verseRange
+                        ? task.newMemorization.description
                         : undefined}
                       pages={task.newMemorization.pages}
                       completed={completion.newMemorization}
                       onToggle={() => toggleTaskCompletion(task.date, 'newMemorization', task.newMemorization.pages.length)}
                       variant="primary"
+                      taskLabel={`📖 الحفظ الجديد - ${task.newMemorization.description || task.newMemorization.surahName}`}
                     />
 
                     {/* المراجعة القريبة */}
@@ -529,6 +531,7 @@ export const WeeklySchedule = ({
                         completed={completion.nearReview}
                         onToggle={() => toggleTaskCompletion(task.date, 'nearReview')}
                         variant="secondary"
+                        taskLabel={`🔄 المراجعة القريبة - ${task.nearReview.description || task.nearReview.surahName}`}
                       />
                     )}
 
@@ -542,6 +545,7 @@ export const WeeklySchedule = ({
                         completed={completion.farReview}
                         onToggle={() => toggleTaskCompletion(task.date, 'farReview')}
                         variant="accent"
+                        taskLabel={`📚 المراجعة البعيدة - ${task.farReview.description || `الجزء ${task.farReview.juzNumber}`}`}
                       />
                     )}
 
@@ -555,6 +559,7 @@ export const WeeklySchedule = ({
                         completed={completion.preparation}
                         onToggle={() => toggleTaskCompletion(task.date, 'preparation')}
                         variant="muted"
+                        taskLabel={`⏰ التحضير للغد`}
                       />
                     )}
 
@@ -568,6 +573,7 @@ export const WeeklySchedule = ({
                         completed={completion.weeklyPreparation}
                         onToggle={() => toggleTaskCompletion(task.date, 'weeklyPreparation')}
                         variant="muted"
+                        taskLabel={`🎧 التحضير الأسبوعي`}
                       />
                     )}
         </div>
@@ -677,6 +683,7 @@ interface TaskItemProps {
   completed: boolean;
   onToggle: () => void;
   variant: 'primary' | 'secondary' | 'accent' | 'muted';
+  taskLabel?: string;
 }
 
 const TaskItem = ({
@@ -688,6 +695,7 @@ const TaskItem = ({
   completed,
   onToggle,
   variant,
+  taskLabel,
 }: TaskItemProps) => {
   const variantStyles = {
     primary: 'border-primary/30 bg-primary/5 hover:bg-primary/10',
@@ -738,6 +746,9 @@ const TaskItem = ({
           )}
         </div>
       </div>
+      {taskLabel && (
+        <MiniPomodoro taskLabel={taskLabel} />
+      )}
     </div>
   );
 };

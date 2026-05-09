@@ -19,6 +19,7 @@ import {
   DailyMuslimGoal, PRAYER_SECTIONS, DAILY_EMOJI_OPTIONS,
 } from '@/types/dailyMuslim';
 import { DailyMuslimExportTable } from '@/components/DailyMuslimExportTable';
+import { MiniPomodoro } from '@/components/MiniPomodoro';
 
 const toDateKey = (d: Date) => {
   const y = d.getFullYear();
@@ -437,19 +438,23 @@ const DailyMuslim = () => {
                         {items.map(g => {
                           const checked = !!dayProgress[g.id];
                           return (
-                            <label
+                            <div
                               key={g.id}
                               className={cn(
-                                'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all',
+                                'flex items-center gap-3 p-3 rounded-lg border transition-all',
                                 checked ? 'bg-primary/10 border-primary/40' : 'bg-card border-border hover:bg-accent/50'
                               )}
                             >
-                              <Checkbox checked={checked} onCheckedChange={() => toggleGoal(g.id)} className="h-5 w-5" />
+                              <Checkbox checked={checked} onCheckedChange={() => toggleGoal(g.id)} className="h-5 w-5 cursor-pointer" />
                               <span className="text-xl">{g.icon}</span>
-                              <span className={cn('flex-1 text-sm', checked && 'line-through text-muted-foreground')}>
+                              <span
+                                onClick={() => toggleGoal(g.id)}
+                                className={cn('flex-1 text-sm cursor-pointer', checked && 'line-through text-muted-foreground')}
+                              >
                                 {g.label}
                               </span>
-                            </label>
+                              <MiniPomodoro taskLabel={`${g.icon} ${g.label}`} />
+                            </div>
                           );
                         })}
                       </div>
