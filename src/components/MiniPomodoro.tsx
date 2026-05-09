@@ -7,7 +7,7 @@ import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
 import { useSoundSystem, SoundMode, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const DURATIONS = [5, 10, 15, 25];
+const DURATIONS = [0.5, 5, 10, 15, 25]; // 0.5 = 30 seconds
 const CIRCLE_R = 120;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 
@@ -228,7 +228,7 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
                   : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
               )}
             >
-              {d} د
+              {d < 1 ? `${d * 60} ث` : `${d} د`}
             </button>
           ))}
         </div>
