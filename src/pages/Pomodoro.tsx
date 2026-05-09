@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Timer, Play, Pause, RotateCcw, BookOpen, Sun, ChevronLeft, Settings2, X, Check } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, BookOpen, Sun, Settings2, X, Check, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -169,6 +169,12 @@ export default function Pomodoro() {
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
                   <Sun className="h-4 w-4" />
                   يومي
+                </div>
+              </Link>
+              <Link to="/analytics">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
+                  <TrendingUp className="h-4 w-4" />
+                  تحليلات
                 </div>
               </Link>
             </div>

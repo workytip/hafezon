@@ -15,7 +15,9 @@ interface MiniPomodoroProps {
 export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const uid = useId();
   const { activeId, claim, release } = usePomodoroContext();
-  const { settings, addSession } = usePomodoroStorage();
+  const { settings, addSession, sessions } = usePomodoroStorage();
+
+  const taskSessionCount = sessions.filter(s => s.taskLabel === taskLabel).length;
 
   const [open, setOpen] = useState(false);
   const [duration, setDuration] = useState(settings.workDuration);
@@ -116,11 +118,14 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
         onClick={openTimer}
         title="ابدأ مؤقت بومودورو"
         className={cn(
-          'p-1 rounded-md transition-colors text-muted-foreground hover:text-primary hover:bg-primary/10',
+          'flex items-center gap-1 p-1 rounded-md transition-colors text-muted-foreground hover:text-primary hover:bg-primary/10',
           className
         )}
       >
         <Timer className="h-3.5 w-3.5" />
+        {taskSessionCount > 0 && (
+          <span className="text-[10px] font-bold text-primary leading-none">{taskSessionCount}</span>
+        )}
       </button>
     );
   }
