@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDailyMuslimStorage } from '@/hooks/useDailyMuslimStorage';
-import { useSoundSystem, SoundMode } from '@/hooks/useSoundSystem';
+import { useSoundSystem, SoundMode, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
 import { PomodoroMode, PomodoroSettings, DEFAULT_POMODORO_SETTINGS } from '@/types/pomodoro';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -54,6 +54,9 @@ export default function Pomodoro() {
   const [soundMode, setSoundMode] = useState<SoundMode>(() =>
     (localStorage.getItem('pomodoro-sound') as SoundMode) ?? 'tick'
   );
+  const [noiseType, setNoiseType] = useState<NoiseType>(() =>
+    (localStorage.getItem('pomodoro-noise-type') as NoiseType) ?? 'brown'
+  );
 
   const { tick, startNoise, stopNoise, bell, resetTickCount } = useSoundSystem();
 
@@ -89,14 +92,15 @@ export default function Pomodoro() {
     if (!isRunning) setTimeLeft(modeDuration(mode, settings) * 60);
   }, [mode, settings]);
 
-  // start/stop noise when running state changes
+  // start/stop noise when running state or noise type changes
   useEffect(() => {
     if (isRunning && (soundMode === 'noise' || soundMode === 'both')) {
-      startNoise();
+      stopNoise();
+      setTimeout(() => startNoise(noiseType), 50);
     } else {
       stopNoise();
     }
-  }, [isRunning, soundMode]);
+  }, [isRunning, soundMode, noiseType]);
 
   // countdown
   useEffect(() => {
@@ -163,8 +167,11 @@ export default function Pomodoro() {
     const next = order[(order.indexOf(soundMode) + 1) % order.length];
     setSoundMode(next);
     localStorage.setItem('pomodoro-sound', next);
-    if (!isRunning || next === 'off' || next === 'tick') stopNoise();
-    if (isRunning && (next === 'noise' || next === 'both')) startNoise();
+  };
+
+  const changeNoiseType = (type: NoiseType) => {
+    setNoiseType(type);
+    localStorage.setItem('pomodoro-noise-type', type);
   };
 
   const saveSettings = () => {
@@ -416,6 +423,33 @@ export default function Pomodoro() {
                 />
               </div>
             ))}
+
+            {/* Noise type picker */}
+            <div className="mb-5">
+              <p className="text-sm text-muted-foreground mb-2">نوع الصوت المحيط</p>
+              <div className="grid grid-cols-3 gap-2">
+                {NOISE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => changeNoiseType(opt.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 p-2 rounded-lg border text-center transition-all',
+                      noiseType === opt.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60'
+                    )}
+                  >
+                    <span className="text-xl">{opt.icon}</span>
+                    <span className="text-[11px] font-medium leading-tight">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+              {soundMode === 'off' || soundMode === 'tick' ? (
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  فعّل وضع "ضوضاء" أو "كلاهما" لسماع الصوت المحيط
+                </p>
+              ) : null}
+            </div>
 
             <div className="flex gap-2 mt-5">
               <Button onClick={saveSettings} className="btn-primary-islamic flex-1">حفظ</Button>
