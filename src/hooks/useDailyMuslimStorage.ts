@@ -21,6 +21,11 @@ export const useDailyMuslimStorage = () => {
         setProgress(JSON.parse(stored));
       } catch (e) {
         console.error('Error loading daily-muslim progress:', e);
+        setProgress({
+          settings: buildInitialSettings(),
+          dailyProgress: {},
+          lastUpdated: new Date().toISOString(),
+        });
       }
     } else {
       // initialize with defaults but don't persist until user interacts

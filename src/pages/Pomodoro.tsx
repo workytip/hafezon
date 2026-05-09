@@ -5,50 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useDailyMuslimStorage } from '@/hooks/useDailyMuslimStorage';
 import { PomodoroMode, PomodoroSettings, DEFAULT_POMODORO_SETTINGS } from '@/types/pomodoro';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toDateKey = (d: Date) => d.toISOString().split('T')[0];
-
-function getTodayTasks(): { label: string; source: string }[] {
-  const tasks: { label: string; source: string }[] = [];
-  const today = toDateKey(new Date());
-
-  // Quran memorization tasks
-  try {
-    const raw = localStorage.getItem('quran-memorization-progress');
-    if (raw) {
-      const data = JSON.parse(raw);
-      const dayTask = (data.tasks as Array<{ date: string; newMemorization?: { description: string }; nearReview?: { description: string }; farReview?: { description: string } }>)?.find(t => t.date === today);
-      if (dayTask) {
-        if (dayTask.newMemorization?.description)
-          tasks.push({ label: `📖 ${dayTask.newMemorization.description}`, source: 'quran' });
-        if (dayTask.nearReview?.description)
-          tasks.push({ label: `🔄 ${dayTask.nearReview.description}`, source: 'quran' });
-        if (dayTask.farReview?.description)
-          tasks.push({ label: `📚 ${dayTask.farReview.description}`, source: 'quran' });
-      }
-    }
-  } catch {}
-
-  // Daily Muslim goals
-  try {
-    const raw = localStorage.getItem('daily-muslim-tracker');
-    if (raw) {
-      const data = JSON.parse(raw);
-      const dayProgress: Record<string, boolean> = data.dailyProgress?.[today] ?? {};
-      const goals: Array<{ id: string; label: string; icon: string }> = data.settings?.goals ?? [];
-      goals
-        .filter(g => !dayProgress[g.id])
-        .slice(0, 6)
-        .forEach(g => tasks.push({ label: `${g.icon} ${g.label}`, source: 'daily' }));
-    }
-  } catch {}
-
-  return tasks;
-}
 
 function modeDuration(mode: PomodoroMode, settings: PomodoroSettings) {
   if (mode === 'work') return settings.workDuration;
@@ -75,6 +39,8 @@ const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 
 export default function Pomodoro() {
   const { todaySessions, settings, addSession, updateSettings } = usePomodoroStorage();
+  const { progress: quranProgress } = useLocalStorage();
+  const { progress: dailyMuslimProgress } = useDailyMuslimStorage();
 
   const [mode, setMode] = useState<PomodoroMode>('work');
   const [timeLeft, setTimeLeft] = useState(settings.workDuration * 60);
@@ -90,7 +56,27 @@ export default function Pomodoro() {
   const progress = totalSeconds > 0 ? ((totalSeconds - timeLeft) / totalSeconds) * 100 : 0;
   const strokeOffset = CIRCUMFERENCE * (timeLeft / totalSeconds);
 
-  const todayTasks = useMemo(getTodayTasks, []);
+  const todayTasks = useMemo(() => {
+    const today = toDateKey(new Date());
+    const tasks: { label: string }[] = [];
+
+    const dayTask = quranProgress?.tasks?.find(t => t.date === today);
+    if (dayTask) {
+      if (dayTask.newMemorization?.description)
+        tasks.push({ label: `📖 ${dayTask.newMemorization.description}` });
+      if (dayTask.nearReview?.description)
+        tasks.push({ label: `🔄 ${dayTask.nearReview.description}` });
+      if (dayTask.farReview?.description)
+        tasks.push({ label: `📚 ${dayTask.farReview.description}` });
+    }
+
+    const dayGoalProgress = dailyMuslimProgress?.dailyProgress?.[today] ?? {};
+    (dailyMuslimProgress?.settings?.goals ?? [])
+      .filter(g => !dayGoalProgress[g.id])
+      .forEach(g => tasks.push({ label: `${g.icon} ${g.label}` }));
+
+    return tasks;
+  }, [quranProgress, dailyMuslimProgress]);
 
   // sync timeLeft when mode or settings change
   useEffect(() => {

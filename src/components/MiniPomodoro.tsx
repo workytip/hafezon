@@ -28,6 +28,13 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const totalSeconds = duration * 60;
   const pct = totalSeconds > 0 ? ((totalSeconds - timeLeft) / totalSeconds) * 100 : 0;
 
+  // cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
   // stop if another timer claims the slot
   useEffect(() => {
     if (!isActive && running) {

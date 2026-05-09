@@ -46,6 +46,7 @@ const DailyMuslim = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [showSettings, setShowSettings] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [exportMode, setExportMode] = useState<null | 'day' | 'week' | 'month'>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [newGoalLabel, setNewGoalLabel] = useState('');
@@ -120,11 +121,12 @@ const DailyMuslim = () => {
     saveSettings({ goals: swapped });
   };
 
-  const handleReset = () => {
-    if (confirm('هل تريد فعلاً مسح جميع البيانات وإعادة الأهداف الافتراضية؟')) {
-      clearProgress();
-      toast.success('تمت إعادة التعيين');
-    }
+  const handleReset = () => setShowResetConfirm(true);
+
+  const confirmReset = () => {
+    clearProgress();
+    toast.success('تمت إعادة التعيين');
+    setShowResetConfirm(false);
   };
 
   // ================= EXPORT =================
@@ -463,8 +465,11 @@ const DailyMuslim = () => {
                 })}
 
                 {goals.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    لا توجد أهداف. افتح "الإعدادات" وأضف أهدافك.
+                  <div className="text-center py-10 space-y-3">
+                    <p className="text-muted-foreground text-sm">لا توجد أهداف بعد.</p>
+                    <Button size="sm" onClick={() => setShowSettings(true)} className="gap-2">
+                      <Settings2 className="h-4 w-4" /> أضف أهدافك من الإعدادات
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -630,6 +635,24 @@ const DailyMuslim = () => {
             getDayProgress={getDayProgress}
             title={exportTitle}
           />
+        </div>
+      )}
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" dir="rtl">
+          <div className="card-islamic p-6 w-full max-w-sm text-center">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-destructive/10 mb-4">
+              <RotateCcw className="h-6 w-6 text-destructive" />
+            </div>
+            <h3 className="font-bold text-lg mb-2">إعادة تعيين البيانات</h3>
+            <p className="text-muted-foreground text-sm mb-6">
+              سيتم مسح جميع بياناتك وإعادة الأهداف الافتراضية. لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="destructive" onClick={confirmReset}>نعم، إعادة تعيين</Button>
+              <Button variant="outline" onClick={() => setShowResetConfirm(false)}>إلغاء</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

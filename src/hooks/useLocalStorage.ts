@@ -40,6 +40,7 @@ export const useLocalStorage = () => {
         setProgress(parsed);
       } catch (e) {
         console.error('Error loading progress:', e);
+        localStorage.removeItem(STORAGE_KEY);
       }
     }
     setIsLoaded(true);
