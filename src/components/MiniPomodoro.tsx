@@ -3,6 +3,7 @@ import { Timer, Play, Pause, RotateCcw, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePomodoroContext } from '@/contexts/PomodoroContext';
 import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
+import { useSoundSystem } from '@/hooks/useSoundSystem';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const DURATIONS = [5, 10, 15, 25];
@@ -16,8 +17,10 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const uid = useId();
   const { activeId, claim, release } = usePomodoroContext();
   const { settings, addSession, sessions } = usePomodoroStorage();
+  const { tick, bell, resetTickCount } = useSoundSystem();
 
   const taskSessionCount = sessions.filter(s => s.taskLabel === taskLabel).length;
+  const soundEnabled = (localStorage.getItem('pomodoro-sound') ?? 'tick') !== 'off';
 
   const [open, setOpen] = useState(false);
   const [duration, setDuration] = useState(settings.workDuration);
@@ -50,12 +53,15 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
       return;
     }
     intervalRef.current = setInterval(() => {
+      if (soundEnabled) tick();
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
           setRunning(false);
           setDone(true);
           release(uid);
+          bell();
+          resetTickCount();
           addSession({
             date: new Date().toISOString().split('T')[0],
             taskLabel,
@@ -88,6 +94,7 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     setDone(false);
     setTimeLeft(duration * 60);
     release(uid);
+    resetTickCount();
   };
 
   const close = (e: React.MouseEvent) => {

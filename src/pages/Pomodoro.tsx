@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Timer, Play, Pause, RotateCcw, BookOpen, Sun, Settings2, X, Check, TrendingUp } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, BookOpen, Sun, Settings2, X, Check, TrendingUp, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDailyMuslimStorage } from '@/hooks/useDailyMuslimStorage';
+import { useSoundSystem, SoundMode } from '@/hooks/useSoundSystem';
 import { PomodoroMode, PomodoroSettings, DEFAULT_POMODORO_SETTINGS } from '@/types/pomodoro';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -50,6 +51,11 @@ export default function Pomodoro() {
   const [showSettings, setShowSettings] = useState(false);
   const [draftSettings, setDraftSettings] = useState<PomodoroSettings>(settings);
   const [completedThisSession, setCompletedThisSession] = useState(false);
+  const [soundMode, setSoundMode] = useState<SoundMode>(() =>
+    (localStorage.getItem('pomodoro-sound') as SoundMode) ?? 'tick'
+  );
+
+  const { tick, startNoise, stopNoise, bell, resetTickCount } = useSoundSystem();
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalSeconds = modeDuration(mode, settings) * 60;
@@ -83,6 +89,15 @@ export default function Pomodoro() {
     if (!isRunning) setTimeLeft(modeDuration(mode, settings) * 60);
   }, [mode, settings]);
 
+  // start/stop noise when running state changes
+  useEffect(() => {
+    if (isRunning && (soundMode === 'noise' || soundMode === 'both')) {
+      startNoise();
+    } else {
+      stopNoise();
+    }
+  }, [isRunning, soundMode]);
+
   // countdown
   useEffect(() => {
     if (!isRunning) {
@@ -90,10 +105,13 @@ export default function Pomodoro() {
       return;
     }
     intervalRef.current = setInterval(() => {
+      if (soundMode === 'tick' || soundMode === 'both') tick();
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
           setIsRunning(false);
+          bell();
+          stopNoise();
           handleComplete();
           return 0;
         }
@@ -101,7 +119,7 @@ export default function Pomodoro() {
       });
     }, 1000);
     return () => clearInterval(intervalRef.current!);
-  }, [isRunning]);
+  }, [isRunning, soundMode]);
 
   const handleComplete = useCallback(() => {
     if (mode === 'work') {
@@ -125,15 +143,28 @@ export default function Pomodoro() {
 
   const reset = () => {
     setIsRunning(false);
+    stopNoise();
+    resetTickCount();
     setTimeLeft(modeDuration(mode, settings) * 60);
     setCompletedThisSession(false);
   };
 
   const switchMode = (m: PomodoroMode) => {
     setIsRunning(false);
+    stopNoise();
+    resetTickCount();
     setMode(m);
     setTimeLeft(modeDuration(m, settings) * 60);
     setCompletedThisSession(false);
+  };
+
+  const cycleSoundMode = () => {
+    const order: SoundMode[] = ['off', 'tick', 'noise', 'both'];
+    const next = order[(order.indexOf(soundMode) + 1) % order.length];
+    setSoundMode(next);
+    localStorage.setItem('pomodoro-sound', next);
+    if (!isRunning || next === 'off' || next === 'tick') stopNoise();
+    if (isRunning && (next === 'noise' || next === 'both')) startNoise();
   };
 
   const saveSettings = () => {
@@ -283,8 +314,22 @@ export default function Pomodoro() {
               : <Play className="h-6 w-6 translate-x-0.5" />
             }
           </Button>
-          <div className="w-11" /> {/* spacer */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={cycleSoundMode}
+            title={{ off: 'الصوت مغلق', tick: 'تيك-توك', noise: 'ضوضاء بيضاء', both: 'تيك + ضوضاء' }[soundMode]}
+            className={cn('rounded-full h-11 w-11', soundMode !== 'off' && 'border-primary text-primary')}
+          >
+            {soundMode === 'off' ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
         </div>
+        {soundMode !== 'off' && (
+          <p className="text-center text-xs text-muted-foreground -mt-5 mb-6">
+            {{ tick: '🕐 تيك-توك', noise: '🌊 ضوضاء بيضاء', both: '🕐🌊 تيك + ضوضاء' }[soundMode]}
+            {' · '}اضغط للتغيير
+          </p>
+        )}
 
         {/* Task selector */}
         <div className="card-islamic p-5 mb-6">
