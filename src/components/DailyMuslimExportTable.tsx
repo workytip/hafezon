@@ -35,7 +35,19 @@ export const DailyMuslimExportTable = forwardRef<HTMLDivElement, Props>(
       color: '#ffffff',
       fontWeight: 'bold',
       fontSize: '11px',
-      padding: '8px 4px',
+      padding: '10px 6px',
+      verticalAlign: 'middle',
+      minWidth: '34px',
+    };
+    // Sub-column (goal) headers — lighter background, more padding, vertically centered
+    const subHeaderCell: React.CSSProperties = {
+      ...cellBase,
+      backgroundColor: '#ddf0e9',  // close to dayCell (#f0f7f4) but with a hint of green
+      color: '#1a5f4a',
+      fontWeight: 'bold',
+      fontSize: '11px',
+      padding: '10px 6px',
+      verticalAlign: 'middle',
       minWidth: '34px',
     };
     const dayCell: React.CSSProperties = {
@@ -105,9 +117,9 @@ export const DailyMuslimExportTable = forwardRef<HTMLDivElement, Props>(
             </tr>
             <tr>
               {orderedGoals.map(g => (
-                <th key={g.id} style={headerCell}>
-                  <div style={{ fontSize: '15px', marginBottom: '2px' }}>{g.icon}</div>
-                  <div style={{ fontSize: '10px', lineHeight: '1.2' }}>{g.label}</div>
+                <th key={g.id} style={subHeaderCell}>
+                  <div style={{ fontSize: '15px', marginBottom: '4px' }}>{g.icon}</div>
+                  <div style={{ fontSize: '10px', lineHeight: '1.3' }}>{g.label}</div>
                 </th>
               ))}
             </tr>

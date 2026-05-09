@@ -6,7 +6,7 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { UserSettings, DailyTask } from '@/types/schedule';
 import { generateDailyTasks } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BookOpen, RotateCcw, Zap, Sparkles, Moon, ChevronLeft, Sun, Timer, TrendingUp } from 'lucide-react';
+import { BookOpen, RotateCcw, Zap, Sparkles, ChevronLeft, Sun, Timer, TrendingUp } from 'lucide-react';
 import { NavLinks } from '@/components/AppNav';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -60,13 +60,18 @@ const Index = () => {
       <div className="container max-w-6xl py-8 px-4 relative">
         {/* الرأس */}
         <header className="text-center mb-10 animate-fade-in">
+          {/* اسم التطبيق */}
+          <div className="mb-5">
+            <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">Hafezon</p>
+            <h1 className="text-5xl md:text-6xl font-bold text-primary">حافظون</h1>
+          </div>
           <NavLinks />
-          <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
+          <div className="mt-6 inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <BookOpen className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
             جدول الحفظ والمراجعة
-          </h1>
+          </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             نظّم حفظك للقرآن الكريم ومراجعتك اليومية بطريقة منهجية ومتابعة دورية
           </p>

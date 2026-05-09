@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PomodoroProvider } from "./contexts/PomodoroContext";
 import { AppNav } from "./components/AppNav";
+import { InstallPWA } from "./components/InstallPWA";
 import Index from "./pages/Index";
 import Ramadan from "./pages/Ramadan";
 import DailyMuslim from "./pages/DailyMuslim";
@@ -35,6 +36,7 @@ const App = () => (
           </Routes>
         </div>
         <AppNav />
+        <InstallPWA />
       </BrowserRouter>
       </PomodoroProvider>
     </TooltipProvider>

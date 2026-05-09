@@ -70,9 +70,12 @@ const DailyMuslim = () => {
   const completedGoals = goals.filter(g => dayProgress[g.id]).length;
   const dayPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
 
-  // dates for week view (selected day - 6 → selected day)
+  // Arab week starts on Saturday (day 6). Find Saturday of the week containing selectedDate.
   const weekDates = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i - 6));
+    const day = selectedDate.getDay(); // 0=Sun…6=Sat
+    const daysFromSat = (day + 1) % 7; // Sat→0, Sun→1, …, Fri→6
+    const weekStart = addDays(selectedDate, -daysFromSat);
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [selectedDate]);
 
   // dates for month view (calendar month containing selectedDate)
@@ -216,34 +219,14 @@ const DailyMuslim = () => {
         </header>
 
         <main className="space-y-6 animate-fade-in">
-          {/* أزرار العرض */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl bg-muted p-1">
-              {([
-                { id: 'day', label: 'يومي', icon: '📅' },
-                { id: 'week', label: 'أسبوعي', icon: '🗓️' },
-                { id: 'month', label: 'شهري', icon: '📆' },
-              ] as const).map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setView(t.id)}
-                  className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                    view === t.id ? 'bg-background shadow text-primary' : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <span className="ml-1">{t.icon}</span>{t.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)} className="gap-1">
-                <Settings2 className="h-4 w-4" />{showSettings ? 'إخفاء الإعدادات' : 'الإعدادات'}
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleReset} className="gap-1">
-                <RotateCcw className="h-4 w-4" />إعادة تعيين
-              </Button>
-            </div>
+          {/* أزرار الإعدادات وإعادة التعيين — أعلى الصفحة */}
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)} className="gap-1">
+              <Settings2 className="h-4 w-4" />{showSettings ? 'إخفاء الإعدادات' : 'الإعدادات'}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleReset} className="gap-1">
+              <RotateCcw className="h-4 w-4" />إعادة تعيين
+            </Button>
           </div>
 
           {/* الإعدادات */}
@@ -413,12 +396,12 @@ const DailyMuslim = () => {
                   const sectionDone = items.filter(g => dayProgress[g.id]).length;
                   return (
                     <div key={section.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
                         <h3 className="font-bold text-foreground flex items-center gap-2">
-                          <span className="text-2xl">{section.icon}</span>
+                          <span className="text-xl">{section.icon}</span>
                           {section.name}
                         </h3>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs font-semibold text-primary bg-primary/15 px-2 py-0.5 rounded-full">
                           {sectionDone}/{items.length}
                         </span>
                       </div>
@@ -433,7 +416,7 @@ const DailyMuslim = () => {
                                 checked ? 'bg-primary/10 border-primary/40' : 'bg-card border-border hover:bg-accent/50'
                               )}
                             >
-                              <Checkbox checked={checked} onCheckedChange={() => toggleGoal(g.id)} className="h-5 w-5 cursor-pointer" />
+                              <Checkbox checked={checked} onCheckedChange={() => toggleGoal(g.id)} className="h-5 w-5 cursor-pointer rounded-full" />
                               <span className="text-xl">{g.icon}</span>
                               <span
                                 onClick={() => toggleGoal(g.id)}
@@ -472,7 +455,7 @@ const DailyMuslim = () => {
                   </Button>
                   <CardTitle className="flex items-center gap-2 justify-center">
                     <Calendar className="h-5 w-5 text-primary" />
-                    آخر 7 أيام حتى {formatArabicShort(selectedDate)}
+                    {formatArabicShort(weekDates[0])} — {formatArabicShort(weekDates[6])}
                   </CardTitle>
                   <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 7))} className="gap-1">
                     الأسبوع التالي<ChevronLeft className="h-4 w-4" />
@@ -603,6 +586,29 @@ const DailyMuslim = () => {
               </CardContent>
             </Card>
           )}
+          {/* فلاتر العرض — أسفل المحتوى */}
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="inline-flex rounded-2xl bg-card border border-border shadow-sm p-1 gap-1">
+              {([
+                { id: 'day', label: 'يومي', icon: '📅' },
+                { id: 'week', label: 'أسبوعي', icon: '🗓️' },
+                { id: 'month', label: 'شهري', icon: '📆' },
+              ] as const).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setView(t.id)}
+                  className={cn(
+                    'px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
+                    view === t.id
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  )}
+                >
+                  <span className="ml-1">{t.icon}</span>{t.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </main>
 
         <footer className="mt-12 text-center text-muted-foreground text-sm">
