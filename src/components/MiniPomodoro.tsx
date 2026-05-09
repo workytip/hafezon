@@ -37,7 +37,7 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
 
   // local mirror of sound prefs so the overlay re-renders when user cycles
   const [soundMode, setSoundMode] = useState<SoundMode>(getSoundMode);
-  const [noiseType]  = useState<NoiseType>(getNoiseType);   // picked in full Pomodoro settings
+  const [noiseType, setNoiseType] = useState<NoiseType>(getNoiseType);
 
   const [open, setOpen]         = useState(false);
   const [duration, setDuration] = useState(settings.workDuration);
@@ -130,10 +130,19 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     const next = SOUND_CYCLE[(SOUND_CYCLE.indexOf(getSoundMode()) + 1) % SOUND_CYCLE.length];
     localStorage.setItem('pomodoro-sound', next);
     setSoundMode(next);
-    // update noise immediately if running
     if (running) {
       stopNoise();
       if (next === 'noise' || next === 'both') setTimeout(() => startNoise(getNoiseType()), 50);
+    }
+  };
+
+  const changeNoiseType = (e: React.MouseEvent, type: NoiseType) => {
+    e.stopPropagation();
+    localStorage.setItem('pomodoro-noise-type', type);
+    setNoiseType(type);
+    if (running && (getSoundMode() === 'noise' || getSoundMode() === 'both')) {
+      stopNoise();
+      setTimeout(() => startNoise(type), 50);
     }
   };
 
@@ -156,11 +165,9 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   );
 
   // ── fullscreen overlay (via portal so it always covers the entire page) ────
-  const noiseLabel = NOISE_OPTIONS.find(o => o.id === (noiseType ?? getNoiseType()));
-
   const overlay = open ? createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md"
       style={{ margin: 0, padding: 0 }}
       onClick={e => e.stopPropagation()}
       dir="rtl"
@@ -186,6 +193,26 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
 
       {/* task name */}
       <p className="text-white/50 text-sm mb-4 max-w-sm text-center px-8 truncate">{taskLabel}</p>
+
+      {/* noise type picker — visible whenever sound mode includes ambient */}
+      {(soundMode === 'noise' || soundMode === 'both') && (
+        <div className="flex flex-wrap gap-2 mb-5 justify-center max-w-sm px-4">
+          {NOISE_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              onClick={e => changeNoiseType(e, opt.id)}
+              className={cn(
+                'px-3 py-1.5 rounded-xl text-xs font-medium transition-all',
+                noiseType === opt.id
+                  ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+              )}
+            >
+              {opt.icon} {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* duration picker */}
       {!running && !done && (
@@ -263,13 +290,6 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
         </button>
         <div className="w-14" />
       </div>
-
-      {/* noise hint */}
-      {(soundMode === 'noise' || soundMode === 'both') && noiseLabel && (
-        <p className="text-white/25 text-xs mt-8">
-          {noiseLabel.icon} {noiseLabel.label}
-        </p>
-      )}
 
       {/* esc hint */}
       <p className="absolute bottom-5 text-white/20 text-xs">Esc للخروج</p>
