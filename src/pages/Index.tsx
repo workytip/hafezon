@@ -6,7 +6,8 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { UserSettings, DailyTask } from '@/types/schedule';
 import { generateDailyTasks } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BookOpen, RotateCcw, Zap, Sparkles, Moon, ChevronLeft, MessageSquare, Sun, Timer, TrendingUp } from 'lucide-react';
+import { BookOpen, RotateCcw, Zap, Sparkles, Moon, ChevronLeft, Sun, Timer, TrendingUp } from 'lucide-react';
+import { NavLinks } from '@/components/AppNav';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -57,13 +58,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background islamic-pattern">
       <div className="container max-w-6xl py-8 px-4 relative">
-        {/* رابط تواصل معنا */}
-        <Link to="/contact" className="absolute top-8 left-4 z-10 inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
-          <MessageSquare className="h-4 w-4" />
-          تواصل معنا
-        </Link>
         {/* الرأس */}
         <header className="text-center mb-10 animate-fade-in">
+          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <BookOpen className="h-12 w-12 text-primary" />
           </div>

@@ -1,0 +1,71 @@
+import { Link, useLocation } from 'react-router-dom';
+import { BookOpen, Sun, Timer, TrendingUp, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const NAV_ITEMS = [
+  { to: '/',             icon: BookOpen,      label: 'الحفظ' },
+  { to: '/daily-muslim', icon: Sun,           label: 'يومي' },
+  { to: '/pomodoro',     icon: Timer,         label: 'بومودورو' },
+  { to: '/analytics',    icon: TrendingUp,    label: 'تحليلات' },
+  { to: '/contact',      icon: MessageSquare, label: 'تواصل' },
+] as const;
+
+/** Horizontal nav row for page headers — shown only on md+ screens */
+export function NavLinks() {
+  const { pathname } = useLocation();
+  return (
+    <div className="hidden md:flex items-center gap-2 flex-wrap justify-center mb-4" dir="rtl">
+      {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+        <Link key={to} to={to}>
+          <div className={cn(
+            'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+            pathname === to
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : 'bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary'
+          )}>
+            <Icon className="h-4 w-4" />
+            {label}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** Fixed bottom tab bar — shown only on mobile */
+export function AppNav() {
+  const { pathname } = useLocation();
+  return (
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border"
+      dir="rtl"
+    >
+      <div className="flex items-end justify-around px-1 pt-1.5"
+           style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
+          const active = pathname === to;
+          return (
+            <Link
+              key={to}
+              to={to}
+              className="flex flex-col items-center gap-0.5 px-2 py-1 min-w-[52px]"
+            >
+              <div className={cn('p-1.5 rounded-xl transition-all', active && 'bg-primary/15')}>
+                <Icon className={cn(
+                  'h-5 w-5 transition-all',
+                  active ? 'text-primary scale-110' : 'text-muted-foreground'
+                )} />
+              </div>
+              <span className={cn(
+                'text-[10px] leading-tight',
+                active ? 'text-primary font-bold' : 'text-muted-foreground'
+              )}>
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

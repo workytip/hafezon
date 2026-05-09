@@ -8,6 +8,7 @@ import { usePomodoroStorage } from '@/hooks/usePomodoroStorage';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDailyMuslimStorage } from '@/hooks/useDailyMuslimStorage';
 import { useSoundSystem, SoundMode, NoiseType, NOISE_OPTIONS } from '@/hooks/useSoundSystem';
+import { NavLinks } from '@/components/AppNav';
 import { PomodoroMode, PomodoroSettings, DEFAULT_POMODORO_SETTINGS } from '@/types/pomodoro';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -188,7 +189,7 @@ export default function Pomodoro() {
 
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setShowSettings(true)}
               className="p-2 rounded-lg hover:bg-primary/10 transition-colors text-muted-foreground hover:text-primary"
@@ -196,26 +197,7 @@ export default function Pomodoro() {
             >
               <Settings2 className="h-5 w-5" />
             </button>
-            <div className="flex gap-2">
-              <Link to="/">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <BookOpen className="h-4 w-4" />
-                  الحفظ
-                </div>
-              </Link>
-              <Link to="/daily-muslim">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <Sun className="h-4 w-4" />
-                  يومي
-                </div>
-              </Link>
-              <Link to="/analytics">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <TrendingUp className="h-4 w-4" />
-                  تحليلات
-                </div>
-              </Link>
-            </div>
+            <NavLinks />
           </div>
 
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-3 glow-emerald">

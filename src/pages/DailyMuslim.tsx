@@ -20,6 +20,7 @@ import {
 } from '@/types/dailyMuslim';
 import { DailyMuslimExportTable } from '@/components/DailyMuslimExportTable';
 import { MiniPomodoro } from '@/components/MiniPomodoro';
+import { NavLinks } from '@/components/AppNav';
 
 const toDateKey = (d: Date) => {
   const y = d.getFullYear();
@@ -203,12 +204,8 @@ const DailyMuslim = () => {
   return (
     <div className="min-h-screen bg-background islamic-pattern">
       <div className="container max-w-6xl py-8 px-4 relative">
-        <Link to="/contact" className="absolute top-8 left-4 z-10 inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
-          <MessageSquare className="h-4 w-4" />
-          تواصل معنا
-        </Link>
-
         <header className="text-center mb-8 animate-fade-in">
+          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-4 glow-emerald">
             <Sun className="h-12 w-12 text-primary" />
           </div>
@@ -216,14 +213,6 @@ const DailyMuslim = () => {
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             نظّم يومك حول الصلوات الخمس وتابع أهدافك الإيمانية بانتظام
           </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <Link to="/">
-              <Button variant="outline" className="gap-2"><BookOpen className="h-4 w-4" /> جدول الحفظ</Button>
-            </Link>
-            <Link to="/pomodoro">
-              <Button variant="outline" className="gap-2"><Timer className="h-4 w-4" /> بومودورو</Button>
-            </Link>
-          </div>
         </header>
 
         <main className="space-y-6 animate-fade-in">

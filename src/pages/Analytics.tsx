@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { NavLinks } from '@/components/AppNav';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -169,27 +170,7 @@ export default function Analytics() {
 
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex gap-2">
-              <Link to="/">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <BookOpen className="h-4 w-4" /> الحفظ
-                </div>
-              </Link>
-              <Link to="/daily-muslim">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <Sun className="h-4 w-4" /> يومي
-                </div>
-              </Link>
-              <Link to="/pomodoro">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all text-sm text-primary font-medium">
-                  <Timer className="h-4 w-4" /> بومودورو
-                </div>
-              </Link>
-            </div>
-            <div />
-          </div>
-
+          <NavLinks />
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-primary/10 mb-3 glow-emerald">
             <TrendingUp className="h-10 w-10 text-primary" />
           </div>
