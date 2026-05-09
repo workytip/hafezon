@@ -20,6 +20,8 @@ import {
 } from '@/types/dailyMuslim';
 import { DailyMuslimExportTable } from '@/components/DailyMuslimExportTable';
 import { MiniPomodoro } from '@/components/MiniPomodoro';
+import { PrayerTimesBar, PrayerTimeBadge } from '@/components/PrayerTimesBar';
+import { PrayerKey } from '@/hooks/usePrayerTimes';
 
 const toDateKey = (d: Date) => {
   const y = d.getFullYear();
@@ -217,6 +219,9 @@ const DailyMuslim = () => {
         </header>
 
         <main className="space-y-6 animate-fade-in">
+          {/* أوقات الصلاة */}
+          <PrayerTimesBar />
+
           {/* أزرار الإعدادات وإعادة التعيين — أعلى الصفحة */}
           <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)} className="gap-1">
@@ -409,7 +414,12 @@ const DailyMuslim = () => {
                         )}>
                           <div className="flex items-center gap-2 font-bold text-sm">
                             <span className="text-xl">{section.icon}</span>
-                            {section.name}
+                            <div className="flex flex-col">
+                              <span>{section.name}</span>
+                              {['fajr','duha','dhuhr','asr','maghrib','isha'].includes(section.id) && (
+                                <PrayerTimeBadge prayerKey={section.id as PrayerKey} />
+                              )}
+                            </div>
                           </div>
                           <span className={cn(
                             'text-xs font-semibold px-2 py-0.5 rounded-full',
