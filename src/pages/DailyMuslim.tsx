@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Sun, ChevronRight, ChevronLeft, Calendar, Settings2, RotateCcw,
   Sparkles, Image as ImageIcon, FileText, MessageSquare, BookOpen,
-  Plus, Trash2, ArrowLeft, ArrowRight, CheckCircle2,
+  Plus, Trash2, ArrowLeft, ArrowRight, CheckCircle2, Timer,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -219,6 +219,9 @@ const DailyMuslim = () => {
             </Link>
             <Link to="/ramadan">
               <Button variant="outline" className="gap-2">🌙 متتبع رمضان</Button>
+            </Link>
+            <Link to="/pomodoro">
+              <Button variant="outline" className="gap-2"><Timer className="h-4 w-4" /> بومودورو</Button>
             </Link>
           </div>
         </header>

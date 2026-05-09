@@ -6,7 +6,7 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { UserSettings, DailyTask } from '@/types/schedule';
 import { generateDailyTasks } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BookOpen, RotateCcw, Zap, Sparkles, Moon, ChevronLeft, MessageSquare, Sun } from 'lucide-react';
+import { BookOpen, RotateCcw, Zap, Sparkles, Moon, ChevronLeft, MessageSquare, Sun, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -90,6 +90,16 @@ const Index = () => {
                 <div className="text-right">
                   <span className="font-bold text-foreground block">☀️ متتبع يوم المسلم</span>
                   <span className="text-xs text-muted-foreground">جدول يومي حول أوقات الصلاة</span>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-primary" />
+              </div>
+            </Link>
+            <Link to="/pomodoro">
+              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
+                <Timer className="h-6 w-6 text-primary" />
+                <div className="text-right">
+                  <span className="font-bold text-foreground block">🍅 مؤقت بومودورو</span>
+                  <span className="text-xs text-muted-foreground">ركّز على أهدافك بجلسات منتجة</span>
                 </div>
                 <ChevronLeft className="h-5 w-5 text-primary" />
               </div>
