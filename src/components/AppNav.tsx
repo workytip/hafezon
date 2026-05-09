@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Sun, Timer, TrendingUp, MessageSquare } from 'lucide-react';
+import { BookOpen, Sun, Timer, TrendingUp, MessageSquare, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useInstallPWA, isMobile } from '@/hooks/useInstallPWA';
 
 const NAV_ITEMS = [
   { to: '/',             icon: BookOpen,      label: 'الحفظ' },
@@ -13,6 +14,8 @@ const NAV_ITEMS = [
 /** Fixed top navbar — shown only on md+ screens */
 export function NavLinks() {
   const { pathname } = useLocation();
+  const { prompt, install, canInstall } = useInstallPWA();
+
   return (
     <nav
       className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border"
@@ -37,6 +40,16 @@ export function NavLinks() {
               </div>
             </Link>
           ))}
+          {canInstall && !isMobile() && (
+            <button
+              onClick={install}
+              title={prompt ? 'تثبيت التطبيق' : 'أضف إلى شريط المهام'}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary"
+            >
+              <Download className="h-4 w-4" />
+              تثبيت
+            </button>
+          )}
         </div>
       </div>
     </nav>
