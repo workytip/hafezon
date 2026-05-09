@@ -220,9 +220,6 @@ const DailyMuslim = () => {
             <Link to="/">
               <Button variant="outline" className="gap-2"><BookOpen className="h-4 w-4" /> جدول الحفظ</Button>
             </Link>
-            <Link to="/ramadan">
-              <Button variant="outline" className="gap-2">🌙 متتبع رمضان</Button>
-            </Link>
             <Link to="/pomodoro">
               <Button variant="outline" className="gap-2"><Timer className="h-4 w-4" /> بومودورو</Button>
             </Link>

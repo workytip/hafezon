@@ -74,16 +74,6 @@ const Index = () => {
             نظّم حفظك للقرآن الكريم ومراجعتك اليومية بطريقة منهجية ومتابعة دورية
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/ramadan">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
-                <Moon className="h-6 w-6 text-primary" />
-                <div className="text-right">
-                  <span className="font-bold text-foreground block">🌙 متتبع رمضان</span>
-                  <span className="text-xs text-muted-foreground">تابع أهدافك اليومية في الشهر الكريم</span>
-                </div>
-                <ChevronLeft className="h-5 w-5 text-primary" />
-              </div>
-            </Link>
             <Link to="/daily-muslim">
               <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all cursor-pointer glow-emerald">
                 <Sun className="h-6 w-6 text-primary" />
