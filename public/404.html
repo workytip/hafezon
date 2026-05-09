@@ -1,21 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
     <title>Hafezon</title>
-    <meta name="description" content="Islamic prayer and Quran tracking application" />
-    <meta name="author" content="Hafezon" />
-
-    <meta property="og:title" content="Hafezon" />
-    <meta property="og:description" content="Islamic prayer and Quran tracking application" />
-    <meta property="og:type" content="website" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="./assets/index-CVg-ruMn.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cr49bboe.css">
+    <script>
+      // GitHub Pages SPA redirect: capture the path and redirect to index.html
+      // with the path encoded as a query param so the app can restore it.
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        '/hafezon/' +
+        '?p=/' + l.pathname.slice(1).replace(/&/g, '~and~') +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
-  </body>
 </html>

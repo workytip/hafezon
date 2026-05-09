@@ -3,17 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <title>Hafezon</title>
     <meta name="description" content="Islamic prayer and Quran tracking application" />
     <meta name="author" content="Hafezon" />
 
-    <!-- TODO: Update og:title to match your application name -->
     <meta property="og:title" content="Hafezon" />
     <meta property="og:description" content="Islamic prayer and Quran tracking application" />
     <meta property="og:type" content="website" />
 
     <meta name="twitter:card" content="summary_large_image" />
+
+    <script>
+      // Restore path redirected via 404.html for GitHub Pages SPA routing.
+      (function () {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        // Handle ?p= param set by 404.html
+        var search = location.search;
+        if (search) {
+          var params = new URLSearchParams(search);
+          var p = params.get('p');
+          if (p) {
+            var q = params.get('q');
+            var url = '/hafezon' + p + (q ? '?' + q.replace(/~and~/g, '&') : '') + location.hash;
+            history.replaceState(null, null, url);
+          }
+        }
+      })();
+    </script>
   </head>
 
   <body>
