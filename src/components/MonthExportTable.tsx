@@ -1,9 +1,18 @@
 import { forwardRef } from 'react';
 import { DailyTask } from '@/types/schedule';
 
+interface TaskCompletion {
+  newMemorization: boolean;
+  nearReview: boolean;
+  farReview: boolean;
+  preparation: boolean;
+  weeklyPreparation: boolean;
+}
+
 interface MonthExportTableProps {
   tasks: DailyTask[];
   monthNumber: number;
+  getDailyProgress?: (date: string) => TaskCompletion;
 }
 
 const arabicMonths = [
@@ -38,8 +47,16 @@ const formatHijriDate = (dateString: string) => {
   }
 };
 
+const Circle = ({ done }: { done: boolean }) => (
+  <div style={{
+    width: '14px', height: '14px', borderRadius: '50%',
+    backgroundColor: done ? '#1a5f4a' : '#d9d9d9',
+    display: 'inline-block', verticalAlign: 'middle', marginLeft: '4px', flexShrink: 0,
+  }} />
+);
+
 export const MonthExportTable = forwardRef<HTMLDivElement, MonthExportTableProps>(
-  ({ tasks, monthNumber }, ref) => {
+  ({ tasks, monthNumber, getDailyProgress }, ref) => {
     const getDayName = (dateString: string) => {
       const date = new Date(dateString);
       return date.toLocaleDateString('ar-SA', { weekday: 'long' });
@@ -195,74 +212,70 @@ export const MonthExportTable = forwardRef<HTMLDivElement, MonthExportTableProps
                 </tr>
               </thead>
               <tbody>
-                {weekTasks.map((task, index) => (
-                  <tr 
-                    key={task.date}
-                    style={{ 
-                      backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff',
-                    }}
-                  >
-                    <td style={tdStyle}>
-                      <strong style={{ fontSize: '14px' }}>{getDayName(task.date)}</strong>
-                      <br />
-                      <span style={{ fontSize: '12px', color: '#888' }}>يوم {task.dayNumber}</span>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
-                        {formatGregorianDate(task.date)}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                        {formatHijriDate(task.date)}
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 'bold', color: '#1a5f4a', fontSize: '13px' }}>
-                        {task.newMemorization.surahName}
-                      </div>
-                      {task.newMemorization.unitLabel && (
-                        <div style={{ fontSize: '12px', color: '#444' }}>{task.newMemorization.unitLabel}</div>
-                      )}
-                      <div style={{ fontSize: '11px', color: '#888' }}>
-                        {formatPages(task.newMemorization.pages)}
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '13px' }}>
-                        {task.nearReview.surahName}
-                      </div>
-                      {task.nearReview.unitLabel && (
-                        <div style={{ fontSize: '12px', color: '#444' }}>{task.nearReview.unitLabel}</div>
-                      )}
-                      <div style={{ fontSize: '11px', color: '#888' }}>
-                        {formatPages(task.nearReview.pages)}
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '13px' }}>
-                        الجزء {task.farReview.juzNumber}
-                      </div>
-                      {task.farReview.unitLabel && (
-                        <div style={{ fontSize: '12px', color: '#444' }}>{task.farReview.unitLabel}</div>
-                      )}
-                      <div style={{ fontSize: '11px', color: '#888' }}>
-                        {formatPages(task.farReview.pages)}
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontSize: '12px', color: '#6b21a8', fontWeight: 'bold' }}>
-                        {task.tomorrowPreparation.description || "القراءة والاستماع"}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#888' }}>
-                        {formatPages(task.tomorrowPreparation.pages)}
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontSize: '12px', color: '#0369a1' }}>
-                        {task.weeklyPreparation?.description || "التحضير للأسبوع القادم"}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {weekTasks.map((task, index) => {
+                  const prog = getDailyProgress ? getDailyProgress(task.date) : null;
+                  return (
+                    <tr
+                      key={task.date}
+                      style={{ backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff' }}
+                    >
+                      <td style={tdStyle}>
+                        <strong style={{ fontSize: '14px' }}>{getDayName(task.date)}</strong>
+                        <br />
+                        <span style={{ fontSize: '12px', color: '#888' }}>يوم {task.dayNumber}</span>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{formatGregorianDate(task.date)}</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{formatHijriDate(task.date)}</div>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <Circle done={!!prog?.newMemorization} />
+                          <div>
+                            <div style={{ fontWeight: 'bold', color: '#1a5f4a', fontSize: '13px' }}>{task.newMemorization.surahName}</div>
+                            {task.newMemorization.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.newMemorization.unitLabel}</div>}
+                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.newMemorization.pages)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <Circle done={!!prog?.nearReview} />
+                          <div>
+                            <div style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '13px' }}>{task.nearReview.surahName}</div>
+                            {task.nearReview.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.nearReview.unitLabel}</div>}
+                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.nearReview.pages)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <Circle done={!!prog?.farReview} />
+                          <div>
+                            <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '13px' }}>الجزء {task.farReview.juzNumber}</div>
+                            {task.farReview.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.farReview.unitLabel}</div>}
+                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.farReview.pages)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <Circle done={!!prog?.preparation} />
+                          <div>
+                            <div style={{ fontSize: '12px', color: '#6b21a8', fontWeight: 'bold' }}>{task.tomorrowPreparation.description || "القراءة والاستماع"}</div>
+                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.tomorrowPreparation.pages)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <Circle done={!!prog?.weeklyPreparation} />
+                          <div style={{ fontSize: '12px', color: '#0369a1' }}>{task.weeklyPreparation?.description || "التحضير للأسبوع القادم"}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 

@@ -404,8 +404,8 @@ export const WeeklySchedule = ({
 
       {/* جداول التصدير المخفية */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-        <ExportTable ref={exportRef} tasks={weekTasks} weekNumber={weekNumber} />
-        <MonthExportTable ref={monthExportRef} tasks={getMonthTasks()} monthNumber={currentMonth} />
+        <ExportTable ref={exportRef} tasks={weekTasks} weekNumber={weekNumber} getDailyProgress={getDailyProgress} />
+        <MonthExportTable ref={monthExportRef} tasks={getMonthTasks()} monthNumber={currentMonth} getDailyProgress={getDailyProgress} />
       </div>
 
       {/* المحتوى المرئي */}

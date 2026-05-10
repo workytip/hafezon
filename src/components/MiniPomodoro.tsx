@@ -43,11 +43,12 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const [soundMode, setSoundMode] = useState<SoundMode>(getSoundMode);
   const [noiseType, setNoiseType] = useState<NoiseType>(getNoiseType);
 
-  const [open, setOpen]         = useState(false);
-  const [duration, setDuration] = useState(settings.workDuration);
-  const [timeLeft, setTimeLeft] = useState(settings.workDuration * 60);
-  const [running, setRunning]   = useState(false);
-  const [done, setDone]         = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [duration, setDuration]   = useState(settings.workDuration);
+  const [timeLeft, setTimeLeft]   = useState(settings.workDuration * 60);
+  const [running, setRunning]     = useState(false);
+  const [done, setDone]           = useState(false);
+  const [escWarning, setEscWarning] = useState(false);
 
   const isActive = activeId === uid;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,13 +103,17 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
     return () => clearInterval(intervalRef.current!);
   }, [running]);
 
-  // Esc closes overlay
+  // Esc: warn if running, else close
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (running) { setEscWarning(true); }
+      else { setOpen(false); setEscWarning(false); }
+    };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [open]);
+  }, [open, running]);
 
   // ── handlers ───────────────────────────────────────────────────────────────
   const toggle = (e: React.MouseEvent) => {
@@ -297,6 +302,41 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
         </button>
         <div className="w-14" />
       </div>
+
+      {/* esc pause warning */}
+      {escWarning && (
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div
+            className="bg-white/10 backdrop-blur-md rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl border border-white/20 max-w-xs w-full mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <p className="text-white text-base font-semibold text-center">
+              سيتم إيقاف المؤقت مؤقتاً
+            </p>
+            <p className="text-white/60 text-xs text-center">
+              يمكنك استئناف الجلسة في أي وقت
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  setRunning(false); release(uid); stopNoise(); resetTickCount();
+                  setEscWarning(false); setOpen(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
+              >
+                إيقاف مؤقت وخروج
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setEscWarning(false); }}
+                className="flex-1 py-2.5 rounded-xl bg-white/10 text-white/80 text-sm font-medium hover:bg-white/20 transition-all"
+              >
+                استمرار
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* esc hint */}
       <p className="absolute bottom-5 text-white/20 text-xs">Esc للخروج</p>

@@ -143,14 +143,11 @@ export const DailyMuslimExportTable = forwardRef<HTMLDivElement, Props>(
                         backgroundColor: checked ? '#e8f5e9' : 'transparent',
                         height: '38px',
                       }}>
-                        {checked ? (
-                          <span style={{ fontSize: '20px' }}>✅</span>
-                        ) : (
-                          <div style={{
-                            width: '20px', height: '20px', borderRadius: '50%',
-                            border: '2px solid #ccc', margin: '0 auto',
-                          }} />
-                        )}
+                        <div style={{
+                          width: '20px', height: '20px', borderRadius: '50%',
+                          backgroundColor: checked ? '#1a5f4a' : '#d9d9d9',
+                          margin: '0 auto',
+                        }} />
                       </td>
                     );
                   })}
