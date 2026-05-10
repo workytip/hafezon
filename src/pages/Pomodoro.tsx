@@ -54,9 +54,10 @@ export default function Pomodoro() {
   const [soundMode, setSoundMode] = useState<SoundMode>(() =>
     (localStorage.getItem('pomodoro-sound') as SoundMode) ?? 'tick'
   );
-  const [noiseType, setNoiseType] = useState<NoiseType>(() =>
-    (localStorage.getItem('pomodoro-noise-type') as NoiseType) ?? 'brown'
-  );
+  const [noiseType, setNoiseType] = useState<NoiseType>(() => {
+    const v = localStorage.getItem('pomodoro-noise-type') as NoiseType;
+    return (['white', 'brown', 'pink'] as NoiseType[]).includes(v) ? v : 'white';
+  });
 
   const { tick, startNoise, stopNoise, bell, resetTickCount } = useSoundSystem();
 

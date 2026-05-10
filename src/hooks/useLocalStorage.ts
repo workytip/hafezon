@@ -60,10 +60,10 @@ export const useLocalStorage = () => {
     setProgress(data);
   }, [progress]);
 
-  // تحديث التقدم اليومي
-  const updateDailyProgress = useCallback((date: string, taskType: keyof TaskCompletion, completed: boolean) => {
+  // تحديث التقدم اليومي (pagesDelta يُحدّث additionalMemorizedPages بشكل ذري لتجنب race condition)
+  const updateDailyProgress = useCallback((date: string, taskType: keyof TaskCompletion, completed: boolean, pagesDelta = 0) => {
     if (!progress) return;
-    
+
     const currentDayProgress = progress.dailyProgress[date] || {
       newMemorization: false,
       nearReview: false,
@@ -71,21 +71,22 @@ export const useLocalStorage = () => {
       preparation: false,
       weeklyPreparation: false,
     };
-    
+
     const updatedDayProgress = {
       ...currentDayProgress,
       [taskType]: completed,
     };
-    
+
     const updatedProgress = {
       ...progress,
       dailyProgress: {
         ...progress.dailyProgress,
         [date]: updatedDayProgress,
       },
+      additionalMemorizedPages: (progress.additionalMemorizedPages || 0) + pagesDelta,
       lastUpdated: new Date().toISOString(),
     };
-    
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProgress));
     setProgress(updatedProgress);
   }, [progress]);

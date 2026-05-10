@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { DailyTask } from '@/types/schedule';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -32,7 +31,7 @@ interface WeeklyScheduleProps {
   onReset: () => void;
   onEditSettings: () => void;
   getDailyProgress: (date: string) => DailyTask['completed'];
-  updateDailyProgress: (date: string, taskType: keyof DailyTask['completed'], completed: boolean) => void;
+  updateDailyProgress: (date: string, taskType: keyof DailyTask['completed'], completed: boolean, pagesDelta?: number) => void;
   addMemorizedPages?: (pages: number) => void;
   enabledStages?: {
     nearReview: boolean;
@@ -42,13 +41,12 @@ interface WeeklyScheduleProps {
   };
 }
 
-export const WeeklySchedule = ({ 
-  tasks, 
+export const WeeklySchedule = ({
+  tasks,
   onReset,
   onEditSettings,
-  getDailyProgress, 
-  updateDailyProgress, 
-  addMemorizedPages,
+  getDailyProgress,
+  updateDailyProgress,
   enabledStages = { nearReview: true, farReview: true, tomorrowPreparation: true, weeklyPreparation: true }
 }: WeeklyScheduleProps) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(0);
@@ -65,16 +63,12 @@ export const WeeklySchedule = ({
   const toggleTaskCompletion = (date: string, taskType: keyof DailyTask['completed'], pagesCount?: number) => {
     const current = getTaskCompletion(date);
     const newValue = !current[taskType];
-    updateDailyProgress(date, taskType, newValue);
-    
-    // إذا كان الحفظ الجديد وتم إتمامه، أضف الصفحات للمحفوظ
-    if (taskType === 'newMemorization' && addMemorizedPages && pagesCount && pagesCount > 0) {
-      if (newValue) {
-        addMemorizedPages(pagesCount);
-      } else {
-        addMemorizedPages(-pagesCount);
-      }
+    // pass pagesDelta atomically to avoid state race with addMemorizedPages
+    let pagesDelta = 0;
+    if (taskType === 'newMemorization' && pagesCount && pagesCount > 0) {
+      pagesDelta = newValue ? pagesCount : -pagesCount;
     }
+    updateDailyProgress(date, taskType, newValue, pagesDelta);
   };
 
   // حساب عدد المهام المفعلة
@@ -498,12 +492,9 @@ export const WeeklySchedule = ({
                 
                 <CardContent className="pt-0">
                   <div className={cn(
-                    "grid grid-cols-1 gap-3",
-                    `sm:grid-cols-2`,
-                    `lg:grid-cols-${Math.min(activeTaskCount, 5)}`
-                  )} style={{ 
-                    gridTemplateColumns: `repeat(${activeTaskCount}, minmax(0, 1fr))` 
-                  }}>
+                    "grid grid-cols-1 gap-3 sm:grid-cols-2",
+                    [, 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5'][Math.min(activeTaskCount, 5)]
+                  )}>
                     {/* الحفظ الجديد */}
                     <TaskItem
                       icon={<BookOpen className="h-4 w-4" />}
@@ -721,10 +712,10 @@ const TaskItem = ({
       )}
     >
       <div className="flex items-start gap-2">
-        <Checkbox 
-          checked={completed}
-          className="mt-0.5 h-5 w-5 rounded-full border-2"
-        />
+        <div className={cn(
+          "mt-0.5 h-5 w-5 rounded-full border-2 shrink-0 transition-colors",
+          completed ? "bg-primary border-primary" : "border-gray-300 bg-transparent"
+        )} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className={iconStyles[variant]}>{icon}</span>

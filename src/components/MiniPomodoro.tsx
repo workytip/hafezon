@@ -11,11 +11,15 @@ const DURATIONS = [0.5, 5, 10, 15, 25]; // 0.5 = 30 seconds
 const CIRCLE_R = 120;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 
+const VALID_NOISE: NoiseType[] = ['white', 'brown', 'pink'];
+
 // Read fresh from localStorage every call — never stale
 const getSoundMode = (): SoundMode =>
   (localStorage.getItem('pomodoro-sound') as SoundMode) ?? 'tick';
-const getNoiseType = (): NoiseType =>
-  (localStorage.getItem('pomodoro-noise-type') as NoiseType) ?? 'brown';
+const getNoiseType = (): NoiseType => {
+  const v = localStorage.getItem('pomodoro-noise-type') as NoiseType;
+  return VALID_NOISE.includes(v) ? v : 'white';
+};
 
 const SOUND_CYCLE: SoundMode[] = ['off', 'tick', 'noise', 'both'];
 const SOUND_LABELS: Record<SoundMode, string> = {
@@ -30,10 +34,10 @@ interface MiniPomodoroProps {
 export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const uid = useId();
   const { activeId, claim, release } = usePomodoroContext();
-  const { settings, addSession, sessions } = usePomodoroStorage();
+  const { settings, addSession, todaySessions } = usePomodoroStorage();
   const { tick, bell, startNoise, stopNoise, resetTickCount } = useSoundSystem();
 
-  const taskSessionCount = sessions.filter(s => s.taskLabel === taskLabel).length;
+  const taskSessionCount = todaySessions.filter(s => s.taskLabel === taskLabel).length;
 
   // local mirror of sound prefs so the overlay re-renders when user cycles
   const [soundMode, setSoundMode] = useState<SoundMode>(getSoundMode);
@@ -110,7 +114,10 @@ export function MiniPomodoro({ taskLabel, className }: MiniPomodoroProps) {
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (running) { setRunning(false); release(uid); }
-    else { claim(uid); setRunning(true); setDone(false); }
+    else {
+      if (done) { setTimeLeft(duration * 60); setDone(false); }
+      claim(uid); setRunning(true);
+    }
   };
 
   const reset = (e: React.MouseEvent) => {
