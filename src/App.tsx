@@ -22,7 +22,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PomodoroProvider>
-      <BrowserRouter basename="/hafezon">
+      <BrowserRouter>
         <NavLinks />
         <div className="pb-20 md:pb-0 md:pt-14">
           <Routes>

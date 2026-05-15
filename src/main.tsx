@@ -7,7 +7,7 @@ createRoot(document.getElementById("root")!).render(<App />);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/hafezon/sw.js', { scope: '/hafezon/' })
+      .register('/sw.js', { scope: '/' })
       .catch(() => {});
   });
 }

@@ -5,14 +5,10 @@
     <title>Hafezon</title>
     <script>
       // GitHub Pages SPA redirect: capture the path and redirect to index.html
-      // with the path encoded as a query param so the app can restore it.
       var l = window.location;
-      var base = '/hafezon';
-      var path = l.pathname.startsWith(base) ? l.pathname.slice(base.length) || '/' : l.pathname;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        '/hafezon/' +
-        '?p=' + path.replace(/&/g, '~and~') +
+        '/?p=' + l.pathname.replace(/&/g, '~and~') +
         (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash
       );

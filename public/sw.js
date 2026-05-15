@@ -1,5 +1,5 @@
-const CACHE = 'hafezon-v2';
-const BASE = '/hafezon';
+const CACHE = 'hafezon-v3';
+const BASE = '';
 
 self.addEventListener('install', event => {
   event.waitUntil(

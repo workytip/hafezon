@@ -8,7 +8,7 @@
     <meta name="author" content="حافظون" />
 
     <!-- PWA -->
-    <link rel="manifest" href="/hafezon/manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#10b981" />
     <meta name="mobile-web-app-capable" content="yes" />
 
@@ -16,7 +16,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="حافظون" />
-    <link rel="apple-touch-icon" href="/hafezon/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="حافظون" />
@@ -33,14 +33,13 @@
         if (redirect && redirect !== location.href) {
           history.replaceState(null, null, redirect);
         }
-        // Handle ?p= param set by 404.html
         var search = location.search;
         if (search) {
           var params = new URLSearchParams(search);
           var p = params.get('p');
           if (p) {
             var q = params.get('q');
-            var url = '/hafezon' + p + (q ? '?' + q.replace(/~and~/g, '&') : '') + location.hash;
+            var url = p + (q ? '?' + q.replace(/~and~/g, '&') : '') + location.hash;
             history.replaceState(null, null, url);
           }
         }
