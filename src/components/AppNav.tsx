@@ -40,10 +40,10 @@ export function NavLinks() {
               </div>
             </Link>
           ))}
-          {canInstall && !isMobile() && (
+          {canInstall && prompt && !isMobile() && (
             <button
               onClick={install}
-              title={prompt ? 'تثبيت التطبيق' : 'أضف إلى شريط المهام'}
+              title="تثبيت التطبيق على جهازك"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary"
             >
               <Download className="h-4 w-4" />
