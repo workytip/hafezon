@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { BookOpen, Sun, Timer, TrendingUp, MessageSquare, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useInstallPWA, isMobile } from '@/hooks/useInstallPWA';
+import { useInstallPWA, isMobile, isAlreadyInstalled } from '@/hooks/useInstallPWA';
 
 const NAV_ITEMS = [
   { to: '/',             icon: BookOpen,      label: 'الحفظ' },
@@ -14,7 +15,18 @@ const NAV_ITEMS = [
 /** Fixed top navbar — shown only on md+ screens */
 export function NavLinks() {
   const { pathname } = useLocation();
-  const { prompt, install, canInstall } = useInstallPWA();
+  const { prompt, install } = useInstallPWA();
+  const [showHint, setShowHint] = useState(false);
+
+  const showInstall = !isMobile() && !isAlreadyInstalled();
+
+  const handleInstallClick = async () => {
+    if (prompt) {
+      await install();
+    } else {
+      setShowHint(h => !h);
+    }
+  };
 
   return (
     <nav
@@ -26,7 +38,7 @@ export function NavLinks() {
           <BookOpen className="h-5 w-5 text-primary" />
           <span className="font-bold text-primary text-base">حافظون</span>
         </Link>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 relative">
           {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
             <Link key={to} to={to}>
               <div className={cn(
@@ -40,15 +52,26 @@ export function NavLinks() {
               </div>
             </Link>
           ))}
-          {canInstall && prompt && !isMobile() && (
-            <button
-              onClick={install}
-              title="تثبيت التطبيق على جهازك"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary"
-            >
-              <Download className="h-4 w-4" />
-              تثبيت
-            </button>
+          {showInstall && (
+            <div className="relative">
+              <button
+                onClick={handleInstallClick}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary"
+              >
+                <Download className="h-4 w-4" />
+                تثبيت
+              </button>
+              {showHint && (
+                <div
+                  className="absolute left-0 top-full mt-2 w-64 p-3 rounded-xl bg-card border border-border shadow-xl text-xs text-right leading-relaxed z-50"
+                  dir="rtl"
+                >
+                  انقر على أيقونة التثبيت (
+                  <span className="font-mono">⊕</span>
+                  ) في شريط العنوان بالمتصفح، أو افتح قائمة المتصفح واختر "تثبيت التطبيق"
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
