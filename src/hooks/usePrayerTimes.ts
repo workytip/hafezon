@@ -4,7 +4,7 @@ import { Coordinates, CalculationMethod, PrayerTimes } from 'adhan';
 export interface PrayerTimesData {
   fajr: Date;
   sunrise: Date;
-  duha: Date;   // sunrise + 20 min
+  duha: Date;   // sunrise + 3 hours
   dhuhr: Date;
   asr: Date;
   maghrib: Date;
@@ -40,7 +40,7 @@ function computeTimes(lat: number, lng: number, date: Date): PrayerTimesData {
   return {
     fajr:    pt.fajr,
     sunrise: pt.sunrise,
-    duha:    addMinutes(pt.sunrise, 20),
+    duha:    addMinutes(pt.sunrise, 180),
     dhuhr:   pt.dhuhr,
     asr:     pt.asr,
     maghrib: pt.maghrib,
