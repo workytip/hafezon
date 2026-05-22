@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { UserSettings, DailyTask } from '@/types/schedule';
+import { useSupabaseSync } from './useSupabaseSync';
 
 interface TaskCompletion {
   newMemorization: boolean;
@@ -15,38 +16,15 @@ interface UserProgress {
   lastUpdated: string;
   completedDays: number[];
   dailyProgress: Record<string, TaskCompletion>;
-  additionalMemorizedPages: number; // صفحات الحفظ اليومي المضافة
+  additionalMemorizedPages: number;
 }
 
-const STORAGE_KEY = 'quran-memorization-progress';
-
 export const useLocalStorage = () => {
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { data: progress, isLoaded, save, clear } = useSupabaseSync<UserProgress>(
+    'quran',
+    'quran-memorization-progress'
+  );
 
-  // تحميل البيانات عند بدء التطبيق
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // تأكد من وجود dailyProgress
-        if (!parsed.dailyProgress) {
-          parsed.dailyProgress = {};
-        }
-        if (parsed.additionalMemorizedPages === undefined) {
-          parsed.additionalMemorizedPages = 0;
-        }
-        setProgress(parsed);
-      } catch (e) {
-        console.error('Error loading progress:', e);
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setIsLoaded(true);
-  }, []);
-
-  // حفظ البيانات
   const saveProgress = useCallback((settings: UserSettings, tasks: DailyTask[]) => {
     const data: UserProgress = {
       settings,
@@ -56,15 +34,18 @@ export const useLocalStorage = () => {
       dailyProgress: progress?.dailyProgress || {},
       additionalMemorizedPages: progress?.additionalMemorizedPages || 0,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    setProgress(data);
-  }, [progress]);
+    save(data);
+  }, [progress, save]);
 
-  // تحديث التقدم اليومي (pagesDelta يُحدّث additionalMemorizedPages بشكل ذري لتجنب race condition)
-  const updateDailyProgress = useCallback((date: string, taskType: keyof TaskCompletion, completed: boolean, pagesDelta = 0) => {
+  const updateDailyProgress = useCallback((
+    date: string,
+    taskType: keyof TaskCompletion,
+    completed: boolean,
+    pagesDelta = 0
+  ) => {
     if (!progress) return;
 
-    const currentDayProgress = progress.dailyProgress[date] || {
+    const current = progress.dailyProgress[date] || {
       newMemorization: false,
       nearReview: false,
       farReview: false,
@@ -72,24 +53,16 @@ export const useLocalStorage = () => {
       weeklyPreparation: false,
     };
 
-    const updatedDayProgress = {
-      ...currentDayProgress,
-      [taskType]: completed,
-    };
-
-    const updatedProgress = {
+    save({
       ...progress,
       dailyProgress: {
         ...progress.dailyProgress,
-        [date]: updatedDayProgress,
+        [date]: { ...current, [taskType]: completed },
       },
       additionalMemorizedPages: (progress.additionalMemorizedPages || 0) + pagesDelta,
       lastUpdated: new Date().toISOString(),
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProgress));
-    setProgress(updatedProgress);
-  }, [progress]);
+    });
+  }, [progress, save]);
 
   const getDailyProgress = useCallback((date: string): TaskCompletion => {
     return progress?.dailyProgress?.[date] || {
@@ -101,36 +74,23 @@ export const useLocalStorage = () => {
     };
   }, [progress]);
 
-  // تحديث الأيام المكتملة
   const markDayComplete = useCallback((dayNumber: number) => {
     if (!progress) return;
     const completedDays = progress.completedDays.includes(dayNumber)
       ? progress.completedDays
       : [...progress.completedDays, dayNumber];
-    const updated = { ...progress, completedDays };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setProgress(updated);
-  }, [progress]);
+    save({ ...progress, completedDays });
+  }, [progress, save]);
 
-  // مسح البيانات
-  const clearProgress = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setProgress(null);
-  }, []);
-
-  // إضافة صفحات الحفظ اليومي
   const addMemorizedPages = useCallback((pages: number) => {
     if (!progress) return;
-    const updated = {
+    save({
       ...progress,
       additionalMemorizedPages: (progress.additionalMemorizedPages || 0) + pages,
       lastUpdated: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setProgress(updated);
-  }, [progress]);
+    });
+  }, [progress, save]);
 
-  // الحصول على إجمالي الصفحات المحفوظة (الأساسية + اليومية)
   const getTotalMemorizedPages = useCallback(() => {
     if (!progress) return 0;
     return (progress.settings?.currentMemorizedPages || 0) + (progress.additionalMemorizedPages || 0);
@@ -141,7 +101,7 @@ export const useLocalStorage = () => {
     isLoaded,
     saveProgress,
     markDayComplete,
-    clearProgress,
+    clearProgress: clear,
     updateDailyProgress,
     getDailyProgress,
     addMemorizedPages,

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PomodoroProvider } from "./contexts/PomodoroContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import { AppNav, NavLinks } from "./components/AppNav";
 import { InstallPWA } from "./components/InstallPWA";
 import Index from "./pages/Index";
@@ -21,6 +22,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AuthProvider>
       <PomodoroProvider>
       <BrowserRouter>
         <NavLinks />
@@ -40,6 +42,7 @@ const App = () => (
         <InstallPWA />
       </BrowserRouter>
       </PomodoroProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

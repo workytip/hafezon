@@ -1,61 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   DailyMuslimProgress, DailyMuslimSettings, DailyMuslimDayProgress,
   DEFAULT_DAILY_GOALS,
 } from '@/types/dailyMuslim';
-
-const STORAGE_KEY = 'daily-muslim-tracker';
+import { useSupabaseSync } from './useSupabaseSync';
 
 const buildInitialSettings = (): DailyMuslimSettings => ({
   goals: DEFAULT_DAILY_GOALS.map((g, i) => ({ ...g, order: i })),
 });
 
+const DEFAULT_PROGRESS: DailyMuslimProgress = {
+  settings: buildInitialSettings(),
+  dailyProgress: {},
+  lastUpdated: new Date().toISOString(),
+};
+
 export const useDailyMuslimStorage = () => {
-  const [progress, setProgress] = useState<DailyMuslimProgress | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { data: raw, isLoaded, save, clear } = useSupabaseSync<DailyMuslimProgress>(
+    'daily_muslim',
+    'daily-muslim-tracker'
+  );
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setProgress(JSON.parse(stored));
-      } catch (e) {
-        console.error('Error loading daily-muslim progress:', e);
-        setProgress({
-          settings: buildInitialSettings(),
-          dailyProgress: {},
-          lastUpdated: new Date().toISOString(),
-        });
-      }
-    } else {
-      // initialize with defaults but don't persist until user interacts
-      setProgress({
-        settings: buildInitialSettings(),
-        dailyProgress: {},
-        lastUpdated: new Date().toISOString(),
-      });
-    }
-    setIsLoaded(true);
-  }, []);
-
-  const persist = (data: DailyMuslimProgress) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    setProgress(data);
-  };
+  // Provide defaults when no data exists yet
+  const progress: DailyMuslimProgress = raw ?? DEFAULT_PROGRESS;
 
   const saveSettings = useCallback((settings: DailyMuslimSettings) => {
-    const data: DailyMuslimProgress = {
+    save({
       settings,
-      dailyProgress: progress?.dailyProgress || {},
+      dailyProgress: progress.dailyProgress,
       lastUpdated: new Date().toISOString(),
-    };
-    persist(data);
-  }, [progress]);
+    });
+  }, [progress, save]);
 
   const updateDayProgress = useCallback((dateKey: string, goalId: string, completed: boolean) => {
-    if (!progress) return;
     const dayProg = progress.dailyProgress[dateKey] || {};
-    persist({
+    save({
       ...progress,
       dailyProgress: {
         ...progress.dailyProgress,
@@ -63,20 +42,15 @@ export const useDailyMuslimStorage = () => {
       },
       lastUpdated: new Date().toISOString(),
     });
-  }, [progress]);
+  }, [progress, save]);
 
   const getDayProgress = useCallback((dateKey: string): DailyMuslimDayProgress => {
-    return progress?.dailyProgress?.[dateKey] || {};
+    return progress.dailyProgress[dateKey] || {};
   }, [progress]);
 
   const clearProgress = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setProgress({
-      settings: buildInitialSettings(),
-      dailyProgress: {},
-      lastUpdated: new Date().toISOString(),
-    });
-  }, []);
+    clear();
+  }, [clear]);
 
   return { progress, isLoaded, saveSettings, updateDayProgress, getDayProgress, clearProgress };
 };

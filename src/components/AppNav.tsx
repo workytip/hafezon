@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Sun, Timer, TrendingUp, MessageSquare, Download } from 'lucide-react';
+import { BookOpen, Sun, Timer, TrendingUp, MessageSquare, Download, LogIn, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useInstallPWA, isMobile, isAlreadyInstalled } from '@/hooks/useInstallPWA';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthModal } from '@/components/AuthModal';
 
 const NAV_ITEMS = [
   { to: '/',             icon: BookOpen,      label: 'الحفظ' },
@@ -16,7 +18,9 @@ const NAV_ITEMS = [
 export function NavLinks() {
   const { pathname } = useLocation();
   const { prompt, install } = useInstallPWA();
+  const { user, signOut } = useAuth();
   const [showHint, setShowHint] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const showInstall = !isMobile() && !isAlreadyInstalled();
 
@@ -73,8 +77,34 @@ export function NavLinks() {
               )}
             </div>
           )}
+
+          {user ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground hidden lg:block truncate max-w-[120px]" title={user.email}>
+                <User className="h-3 w-3 inline ml-1" />
+                {user.email}
+              </span>
+              <button
+                onClick={() => signOut()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                title="تسجيل الخروج"
+              >
+                <LogOut className="h-4 w-4" />
+                خروج
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <LogIn className="h-4 w-4" />
+              دخول
+            </button>
+          )}
         </div>
       </div>
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </nav>
   );
 }
