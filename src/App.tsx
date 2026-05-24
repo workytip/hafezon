@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PomodoroProvider } from "./contexts/PomodoroContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppNav, NavLinks } from "./components/AppNav";
+import { EmailConfirmBanner } from "./components/EmailConfirmBanner";
 import { InstallPWA } from "./components/InstallPWA";
 import Index from "./pages/Index";
 import Ramadan from "./pages/Ramadan";
@@ -26,6 +27,7 @@ const App = () => (
       <PomodoroProvider>
       <BrowserRouter>
         <NavLinks />
+        <EmailConfirmBanner />
         <div className="pb-20 md:pb-0 md:pt-14">
           <Routes>
             <Route path="/" element={<Index />} />
