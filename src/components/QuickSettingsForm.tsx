@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { surahs } from '@/data/quranData';
+import { surahs, getRubByPage, getHizbByPage } from '@/data/quranData';
 import { UserSettings, MemorizationUnit } from '@/types/schedule';
 import { Zap, BookOpen, RefreshCw, ArrowLeft, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -73,8 +73,8 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
       memorizationFrequency: 'daily',
       currentSurahNumber,
       currentPageInSurah: startPage,
-      currentRubNumber: 1,
-      currentHizbNumber: 1,
+      currentRubNumber: getRubByPage(startPage)?.number || 1,
+      currentHizbNumber: getHizbByPage(startPage)?.number || 1,
       currentVerseNumber: memorizationUnit === 'verses' ? currentPosition : 1,
       currentMemorizedPages: memorizedPages,
       dailyNewMemorization: dailyAmount,
