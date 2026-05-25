@@ -80,24 +80,30 @@ const Index = () => {
             <div className="max-w-2xl mx-auto animate-fade-in">
               {formMode === 'choice' ? (
                 <div className="space-y-6">
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold mb-2">كيف تريد البدء؟</h2>
-                    <p className="text-muted-foreground">اختر الطريقة المناسبة لك</p>
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold mb-2">كيف تريد إعداد جدولك؟</h2>
+                    <p className="text-muted-foreground text-sm">اختر حسب وضعك الحالي</p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <button
                       onClick={() => setFormMode('quick')}
-                      className="card-islamic p-6 text-right hover:border-primary/50 transition-all group"
+                      className="card-islamic p-6 text-right hover:border-primary/50 transition-all group border-2"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                          <Zap className="h-8 w-8 text-primary" />
+                        <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
+                          <Zap className="h-7 w-7 text-primary" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold mb-1">إعداد سريع</h3>
-                          <p className="text-sm text-muted-foreground">
-                            ابدأ في دقيقة واحدة مع الإعدادات الأساسية
-                          </p>
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-lg font-bold">إعداد سريع</h3>
+                            <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">مُوصى به</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">3 أسئلة · أقل من دقيقة</p>
+                          <ul className="text-xs text-muted-foreground space-y-1 pt-1">
+                            <li>✓ لمن لم يحفظ شيئاً بعد</li>
+                            <li>✓ لمن يريد البدء الآن</li>
+                            <li>✓ يمكن تعديله في أي وقت</li>
+                          </ul>
                         </div>
                       </div>
                     </button>
@@ -106,14 +112,17 @@ const Index = () => {
                       className="card-islamic p-6 text-right hover:border-primary/50 transition-all group"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-xl bg-secondary/20 group-hover:bg-secondary/30 transition-colors">
-                          <Sparkles className="h-8 w-8 text-secondary-foreground" />
+                        <div className="p-3 rounded-xl bg-secondary/20 group-hover:bg-secondary/30 transition-colors shrink-0">
+                          <Sparkles className="h-7 w-7 text-secondary-foreground" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold mb-1">إعداد مخصص</h3>
-                          <p className="text-sm text-muted-foreground">
-                            تحكم كامل في جميع تفاصيل خطتك
-                          </p>
+                        <div className="flex-1 space-y-2">
+                          <h3 className="text-lg font-bold">إعداد مخصص</h3>
+                          <p className="text-xs text-muted-foreground">4 خطوات · 3 دقائق</p>
+                          <ul className="text-xs text-muted-foreground space-y-1 pt-1">
+                            <li>✓ لمن حفظ سابقاً ويريد مراجعته</li>
+                            <li>✓ تحكم كامل في ترتيب المراجعة</li>
+                            <li>✓ إعدادات متقدمة للأرباع والأحزاب</li>
+                          </ul>
                         </div>
                       </div>
                     </button>

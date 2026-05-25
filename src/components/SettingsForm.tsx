@@ -66,7 +66,7 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
     initialSettings?.nearReviewStartVerse || 1
   );
   const [dailyNearReview, setDailyNearReview] = useState<number>(
-    initialSettings?.dailyNearReview || 5
+    initialSettings?.dailyNearReview ?? 1
   );
   const [nearReviewOrder, setNearReviewOrder] = useState<ReviewOrder>(
     initialSettings?.nearReviewOrder || 'forward'
@@ -80,7 +80,7 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
     initialSettings?.farReviewStartVerse || 1
   );
   const [dailyFarReview, setDailyFarReview] = useState<number>(
-    initialSettings?.dailyFarReview || 10
+    initialSettings?.dailyFarReview ?? 50
   );
   const [farReviewOrder, setFarReviewOrder] = useState<ReviewOrder>(
     initialSettings?.farReviewOrder || 'forward'
@@ -223,6 +223,56 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
     }
   }, [allMemorizedSurahs, memorizedJuzs, farCustomOrder, getValidIds]);
 
+  // المعدل اليومي الفعلي بالوحدة المختارة
+  const actualDailyNew = useMemo(() =>
+    memorizationUnit === 'pages'
+      ? parseFloat(dailyNewMemorizationDecimal) || 1
+      : dailyNewMemorization,
+  [memorizationUnit, dailyNewMemorizationDecimal, dailyNewMemorization]);
+
+  // الحد الأقصى المنطقي للمراجعة = أسبوع من الحفظ
+  const maxNearReview = useMemo(() =>
+    Math.max(Math.ceil(actualDailyNew * 7), 1),
+  [actualDailyNew]);
+
+  const maxFarReview = useMemo(() =>
+    allMemorizedSurahs.length > 0
+      ? Math.min(Math.max(Math.ceil(actualDailyNew * 14), 5), 50)
+      : Math.max(Math.ceil(actualDailyNew * 7), 1),
+  [actualDailyNew, allMemorizedSurahs.length]);
+
+  // ضبط تلقائي عند تجاوز الحد الجديد: القريب يرجع للأدنى، البعيد يبقى عند الأعلى
+  const [nearReviewCapped, setNearReviewCapped] = useState(false);
+  const [farReviewCapped, setFarReviewCapped] = useState(false);
+
+  useEffect(() => {
+    if (dailyNearReview > maxNearReview) {
+      setDailyNearReview(1);
+      setNearReviewCapped(true);
+    } else {
+      setNearReviewCapped(false);
+    }
+  }, [maxNearReview]);
+
+  useEffect(() => {
+    if (dailyFarReview > maxFarReview) {
+      setDailyFarReview(maxFarReview);
+      setFarReviewCapped(true);
+    } else {
+      setFarReviewCapped(false);
+    }
+  }, [maxFarReview]);
+
+  // تقدير الوقت اليومي
+  const dailyTimeEstimate = useMemo(() => {
+    let min = Math.round(actualDailyNew * 12);
+    if (enableNearReview) min += Math.round(dailyNearReview * 4);
+    if (enableFarReview) min += Math.round(dailyFarReview * 3);
+    if (enableTomorrowPreparation) min += 5;
+    if (enableWeeklyPreparation) min += 5;
+    return min;
+  }, [actualDailyNew, enableNearReview, dailyNearReview, enableFarReview, dailyFarReview, enableTomorrowPreparation, enableWeeklyPreparation]);
+
   const currentMemorizedPages = useMemo(() => {
     const pages = new Set<number>();
 
@@ -363,7 +413,7 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
               >
                 {index + 1 < currentStep ? <Check className="h-4 w-4" /> : index + 1}
               </div>
-              <span className="text-xs mt-1 hidden md:block">{title}</span>
+              <span className="text-[10px] sm:text-xs mt-1 text-center leading-tight">{title}</span>
             </div>
           ))}
         </div>
@@ -452,72 +502,71 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
           </div>
         )}
 
-        {/* الخطوة 2: مقدار الحفظ */}
+        {/* الخطوة 2: موقعك ومقدار الحفظ */}
         {currentStep === 2 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="inline-flex p-3 rounded-full bg-primary/20 mb-2">
-                <Sparkles className="h-8 w-8 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold">كم تحفظ {memorizationFrequency === 'daily' ? 'يومياً' : 'أسبوعياً'}؟</h2>
-              <p className="text-muted-foreground">حدد المقدار الذي يناسب وقتك وقدرتك</p>
+          <div className="space-y-4">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold">من أين وصلت في حفظك؟</h2>
+              <p className="text-sm text-muted-foreground">حدد موقعك الحالي في المصحف ومقدار حفظك اليومي</p>
             </div>
 
-            <div className="max-w-md mx-auto space-y-6 mt-8">
-              {/* أين وصلت */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">📍 من أين ستبدأ الحفظ الجديد؟</Label>
-                <p className="text-sm text-muted-foreground">اختر السورة ثم حدد من أي {memorizationUnit === 'verses' ? 'آية' : 'صفحة'} ستبدأ فيها</p>
-                
-                {memorizationUnit === 'pages' && (
-                  <div className="space-y-4">
+            {/* ① اختيار السورة — العنصر الأبرز */}
+            <div className="rounded-2xl border-2 border-primary overflow-hidden">
+              <div className="flex items-center gap-2 bg-primary px-4 py-3">
+                <div className="w-6 h-6 rounded-full bg-white/25 flex items-center justify-center text-white text-xs font-bold shrink-0">١</div>
+                <span className="font-bold text-white">
+                  {memorizationUnit === 'rub' ? 'اختر الربع الذي ستبدأ منه' :
+                   memorizationUnit === 'hizb' ? 'اختر الحزب الذي ستبدأ منه' :
+                   'اختر السورة التي تحفظها الآن'}
+                </span>
+                <span className="mr-auto text-xs bg-white/20 text-white px-2 py-0.5 rounded-full shrink-0">مطلوب</span>
+              </div>
+
+              <div className="p-4 bg-primary/5 space-y-3">
+                {(memorizationUnit === 'pages' || memorizationUnit === 'verses') && (
+                  <>
                     <Select
                       value={currentSurahNumber.toString()}
                       onValueChange={(value) => {
                         setCurrentSurahNumber(parseInt(value));
                         setCurrentPageInSurah(1);
+                        setCurrentVerseNumber(1);
                       }}
                     >
-                      <SelectTrigger className="bg-background">
+                      <SelectTrigger className="h-14 text-base bg-background border-2 border-primary/30 focus:border-primary">
                         <SelectValue placeholder="اختر السورة" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-72">
                         {surahs.map((surah) => (
                           <SelectItem key={surah.number} value={surah.number.toString()}>
-                            {surah.arabicName}
+                            <span className="text-muted-foreground text-xs ml-1">{surah.number}.</span> {surah.arabicName}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">ستبدأ من وجه رقم</span>
-                        <span className="font-bold text-primary text-lg">{currentPageInSurah} <span className="text-xs font-normal text-muted-foreground">(صفحة {(selectedSurah?.startPage || 1) + currentPageInSurah - 1})</span></span>
+
+                    {selectedSurah && (
+                      <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-primary/20">
+                        <div className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shrink-0">
+                          {currentSurahNumber}
+                        </div>
+                        <div>
+                          <p className="font-bold text-base">{selectedSurah.arabicName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            صفحة {selectedSurah.startPage}–{selectedSurah.endPage} · {selectedSurah.totalVerses} آية
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        السورة فيها {selectedSurah?.totalPages || 1} صفحة (من ص{selectedSurah?.startPage} إلى ص{selectedSurah?.endPage})
-                      </p>
-                      <Slider
-                        value={[currentPageInSurah]}
-                        onValueChange={(value) => setCurrentPageInSurah(value[0])}
-                        min={1}
-                        max={selectedSurah?.totalPages || 1}
-                        step={1}
-                        className="py-2"
-                      />
-                    </div>
-                  </div>
+                    )}
+                  </>
                 )}
-                
+
                 {memorizationUnit === 'rub' && (
-                  <Select
-                    value={currentRubNumber.toString()}
-                    onValueChange={(value) => setCurrentRubNumber(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-background">
+                  <Select value={currentRubNumber.toString()} onValueChange={(v) => setCurrentRubNumber(parseInt(v))}>
+                    <SelectTrigger className="h-14 text-base bg-background border-2 border-primary/30">
                       <SelectValue placeholder="الربع الحالي" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-72">
                       {rubs.map((rub) => (
                         <SelectItem key={rub.number} value={rub.number.toString()}>
                           الربع {rub.number} ({getSurahNameForRub(rub.number)}) - الجزء {rub.juzNumber}
@@ -526,16 +575,13 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                     </SelectContent>
                   </Select>
                 )}
-                
+
                 {memorizationUnit === 'hizb' && (
-                  <Select
-                    value={currentHizbNumber.toString()}
-                    onValueChange={(value) => setCurrentHizbNumber(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-background">
+                  <Select value={currentHizbNumber.toString()} onValueChange={(v) => setCurrentHizbNumber(parseInt(v))}>
+                    <SelectTrigger className="h-14 text-base bg-background border-2 border-primary/30">
                       <SelectValue placeholder="الحزب الحالي" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-72">
                       {hizbs.map((hizb) => (
                         <SelectItem key={hizb.number} value={hizb.number.toString()}>
                           الحزب {hizb.number} ({getSurahNameForHizb(hizb.number)}) - الجزء {hizb.juz}
@@ -544,31 +590,44 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                     </SelectContent>
                   </Select>
                 )}
-                
-                {memorizationUnit === 'verses' && (
-                  <div className="space-y-4">
-                    <Select
-                      value={currentSurahNumber.toString()}
-                      onValueChange={(value) => {
-                        setCurrentSurahNumber(parseInt(value));
-                        setCurrentVerseNumber(1);
-                      }}
-                    >
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="اختر السورة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {surahs.map((surah) => (
-                          <SelectItem key={surah.number} value={surah.number.toString()}>
-                            {surah.arabicName} ({surah.totalVerses} آية)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>من الآية</span>
-                        <span className="font-bold text-primary">{currentVerseNumber} / {selectedSurah?.totalVerses || 7}</span>
+              </div>
+            </div>
+
+            {/* ② من أي صفحة/آية — فقط للصفحات والآيات */}
+            {(memorizationUnit === 'pages' || memorizationUnit === 'verses') && (
+              <div className="rounded-2xl border-2 border-muted overflow-hidden">
+                <div className="flex items-center gap-2 bg-muted/60 px-4 py-3">
+                  <div className="w-6 h-6 rounded-full bg-muted-foreground/50 flex items-center justify-center text-background text-xs font-bold shrink-0">٢</div>
+                  <span className="font-semibold text-sm">
+                    من أي {memorizationUnit === 'verses' ? 'آية' : 'صفحة'} ستبدأ في هذه السورة؟
+                  </span>
+                </div>
+                <div className="p-4 space-y-3">
+                  {memorizationUnit === 'pages' ? (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">صفحة المصحف</span>
+                        <span className="text-3xl font-bold text-primary">
+                          {(selectedSurah?.startPage || 1) + currentPageInSurah - 1}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[currentPageInSurah]}
+                        onValueChange={(value) => setCurrentPageInSurah(value[0])}
+                        min={1}
+                        max={selectedSurah?.totalPages || 1}
+                        step={1}
+                        className="py-2"
+                      />
+                      <p className="text-xs text-muted-foreground text-center">
+                        وجه {currentPageInSurah} من {selectedSurah?.totalPages || 1} في سورة {selectedSurah?.arabicName}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">رقم الآية</span>
+                        <span className="text-3xl font-bold text-primary">{currentVerseNumber}</span>
                       </div>
                       <Slider
                         value={[currentVerseNumber]}
@@ -578,22 +637,24 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                         step={1}
                         className="py-2"
                       />
-                    </div>
-                  </div>
-                )}
+                      <p className="text-xs text-muted-foreground text-center">
+                        آية {currentVerseNumber} من {selectedSurah?.totalVerses || 7} في سورة {selectedSurah?.arabicName}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
+            )}
 
-              {/* مقدار الحفظ الجديد */}
-              <div className="space-y-3">
+            {/* ③ المقدار اليومي وتاريخ البدء */}
+            <div className="grid grid-cols-1 gap-4 pt-1">
+              <div className="space-y-2">
                 <Label className="text-base font-semibold">
-                  📖 كم {getUnitLabel()} جديدة {memorizationFrequency === 'daily' ? 'يومياً' : 'أسبوعياً'}؟
+                  كم {getUnitLabel()} جديدة {memorizationFrequency === 'daily' ? 'يومياً' : 'أسبوعياً'}؟
                 </Label>
                 {memorizationUnit === 'pages' ? (
-                  <Select
-                    value={dailyNewMemorizationDecimal}
-                    onValueChange={setDailyNewMemorizationDecimal}
-                  >
-                    <SelectTrigger className="bg-background">
+                  <Select value={dailyNewMemorizationDecimal} onValueChange={setDailyNewMemorizationDecimal}>
+                    <SelectTrigger className="bg-background h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -613,11 +674,8 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                     </SelectContent>
                   </Select>
                 ) : memorizationUnit === 'verses' ? (
-                  <Select
-                    value={dailyNewMemorization.toString()}
-                    onValueChange={(value) => setDailyNewMemorization(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-background">
+                  <Select value={dailyNewMemorization.toString()} onValueChange={(v) => setDailyNewMemorization(parseInt(v))}>
+                    <SelectTrigger className="bg-background h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -632,11 +690,8 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Select
-                    value={dailyNewMemorization.toString()}
-                    onValueChange={(value) => setDailyNewMemorization(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-background">
+                  <Select value={dailyNewMemorization.toString()} onValueChange={(v) => setDailyNewMemorization(parseInt(v))}>
+                    <SelectTrigger className="bg-background h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -658,14 +713,13 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                 )}
               </div>
 
-              {/* تاريخ البدء */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">📅 تاريخ البدء</Label>
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">تاريخ البدء</Label>
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-background"
+                  className="bg-background h-12"
                 />
               </div>
             </div>
@@ -683,6 +737,14 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
               <p className="text-muted-foreground">اختر الأجزاء أو السور التي تريد مراجعتها (اختياري)</p>
               <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-full inline-block">
                 💡 يمكنك تخطي هذه الخطوة إذا لم تحفظ شيئاً بعد
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 space-y-1">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">ماذا لو تجاوزت هذه الخطوة؟</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                لا مشكلة — ستبدأ المراجعة البعيدة تلقائياً من الأسبوع الثاني لتراجع ما حفظته في جدولك الجديد.
+                اختر هنا <strong>فقط</strong> إذا حفظت قرآناً سابقاً وتريد إدراجه في خطة مراجعتك.
               </p>
             </div>
 
@@ -708,46 +770,97 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
             </div>
 
             <div className="max-w-lg mx-auto space-y-6 mt-6">
+
+              {/* ملخص يومك */}
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold">يومك سيتضمن تقريباً:</p>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">~{dailyTimeEstimate} دقيقة</span>
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                    <span>حفظ {actualDailyNew} {getUnitLabel()} جديدة</span>
+                  </div>
+                  {enableNearReview && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                      <span>مراجعة قريبة: {dailyNearReview} {getUnitLabelPlural()} من حفظ أمس</span>
+                    </div>
+                  )}
+                  {enableFarReview && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-secondary shrink-0" />
+                      <span>مراجعة بعيدة: {dailyFarReview} {getUnitLabelPlural()} من الحفظ القديم</span>
+                    </div>
+                  )}
+                  {enableTomorrowPreparation && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                      <span>استماع لما ستحفظه غداً (~5 دقائق)</span>
+                    </div>
+                  )}
+                  {enableWeeklyPreparation && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-amber-300 shrink-0" />
+                      <span>استماع أسبوعي لكل الجديد (~5 دقائق)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* اختيار المراحل المفعلة */}
               <div className="p-4 bg-muted/50 rounded-xl space-y-3">
-                <Label className="text-base font-semibold">⚙️ ماذا تريد أن يتضمن جدولك؟</Label>
-                <p className="text-xs text-muted-foreground mb-3">اختر المراحل التي تناسب برنامجك (يمكنك تعطيل ما لا تحتاجه)</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex items-center gap-2 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={enableNearReview} 
+                <Label className="text-base font-semibold">ماذا تريد أن يتضمن جدولك؟</Label>
+                <p className="text-xs text-muted-foreground">عطّل ما لا يناسبك — يمكنك تغييره لاحقاً</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableNearReview}
                       onChange={(e) => setEnableNearReview(e.target.checked)}
-                      className="h-4 w-4 rounded"
+                      className="h-4 w-4 rounded mt-0.5 shrink-0"
                     />
-                    <span className="text-sm">المراجعة القريبة</span>
+                    <div>
+                      <p className="text-sm font-medium">المراجعة القريبة</p>
+                      <p className="text-xs text-muted-foreground">مراجعة ما حفظته أمس يومياً</p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={enableFarReview} 
+                  <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableFarReview}
                       onChange={(e) => setEnableFarReview(e.target.checked)}
-                      className="h-4 w-4 rounded"
+                      className="h-4 w-4 rounded mt-0.5 shrink-0"
                     />
-                    <span className="text-sm">المراجعة البعيدة</span>
+                    <div>
+                      <p className="text-sm font-medium">المراجعة البعيدة</p>
+                      <p className="text-xs text-muted-foreground">مراجعة الحفظ القديم دورياً</p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={enableTomorrowPreparation} 
+                  <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableTomorrowPreparation}
                       onChange={(e) => setEnableTomorrowPreparation(e.target.checked)}
-                      className="h-4 w-4 rounded"
+                      className="h-4 w-4 rounded mt-0.5 shrink-0"
                     />
-                    <span className="text-sm">التحضير للغد</span>
+                    <div>
+                      <p className="text-sm font-medium">التحضير للغد</p>
+                      <p className="text-xs text-muted-foreground">استمع لما ستحفظه غداً مسبقاً</p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={enableWeeklyPreparation} 
+                  <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableWeeklyPreparation}
                       onChange={(e) => setEnableWeeklyPreparation(e.target.checked)}
-                      className="h-4 w-4 rounded"
+                      className="h-4 w-4 rounded mt-0.5 shrink-0"
                     />
-                    <span className="text-sm">التحضير الأسبوعي</span>
+                    <div>
+                      <p className="text-sm font-medium">التحضير الأسبوعي</p>
+                      <p className="text-xs text-muted-foreground">استمع لكل جديد الأسبوع القادم</p>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -801,10 +914,19 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                       value={[dailyNearReview]}
                       onValueChange={(value) => setDailyNearReview(value[0])}
                       min={1}
-                      max={50}
+                      max={maxNearReview}
                       step={1}
                       className="py-2"
                     />
+                    {nearReviewCapped ? (
+                      <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5 rounded-lg">
+                        ⚠️ تم تعديل القدر تلقائياً ليتناسب مع معدل حفظك — الحد الأقصى: {maxNearReview} {getUnitLabelPlural()}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        الحد الأقصى: {maxNearReview} {getUnitLabelPlural()} (أسبوع من حفظك اليومي)
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -859,10 +981,20 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
                       value={[dailyFarReview]}
                       onValueChange={(value) => setDailyFarReview(value[0])}
                       min={1}
-                      max={50}
+                      max={maxFarReview}
                       step={1}
                       className="py-2"
                     />
+                    {farReviewCapped ? (
+                      <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5 rounded-lg">
+                        ⚠️ تم تعديل القدر تلقائياً ليتناسب مع معدل حفظك — الحد الأقصى: {maxFarReview} {getUnitLabelPlural()}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        الحد الأقصى: {maxFarReview} {getUnitLabelPlural()}
+                        {allMemorizedSurahs.length === 0 && ' · ستبدأ من الأسبوع الثاني تلقائياً'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

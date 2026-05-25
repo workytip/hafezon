@@ -222,10 +222,13 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
         {/* المراجعة اليومية */}
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <Label className="flex items-center gap-2 text-base font-medium">
-              <RefreshCw className="h-4 w-4 text-secondary-foreground" />
-              المراجعة القريبة
-            </Label>
+            <div>
+              <Label className="flex items-center gap-2 text-base font-medium">
+                <RefreshCw className="h-4 w-4 text-secondary-foreground" />
+                المراجعة القريبة
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">كمية ما ستراجعه يومياً من حفظك الأخير</p>
+            </div>
             <span className="text-lg font-bold text-secondary-foreground">
               {dailyReview} {getUnitLabel()}
             </span>

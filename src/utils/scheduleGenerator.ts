@@ -376,7 +376,38 @@ export const generateDailyTasks = (
   };
   
   let weeklyAccumulated = 0;
-  
+
+  // تاريخ الأيام المحفوظة للمراجعة الديناميكية
+  type DayEntry = { pages: number[]; units: number[]; verseRange?: VerseRange };
+  const dayHistory: DayEntry[] = [];
+  const hasMemoizedSurahs = memorizedSurahs.length > 0;
+
+  const buildRangeFromHistory = (entry: DayEntry | undefined): VerseRange | undefined => {
+    if (!entry) return undefined;
+    if (memorizationUnit === 'verses') return entry.verseRange;
+    if (memorizationUnit === 'pages' && entry.pages.length > 0) {
+      const surah = getSurahByPage(entry.pages[0]);
+      if (!surah) return undefined;
+      return { surahNumber: surah.number, surahName: surah.arabicName, startVerse: entry.pages[0], endVerse: entry.pages[entry.pages.length - 1] };
+    }
+    if ((memorizationUnit === 'rub' || memorizationUnit === 'hizb') && entry.units.length > 0) {
+      const pages = getUnitPages(entry.units[0]);
+      if (pages.length === 0) return undefined;
+      const surah = getSurahByPage(pages[0]);
+      if (!surah) return undefined;
+      return { surahNumber: surah.number, surahName: surah.arabicName, startVerse: pages[0], endVerse: pages[pages.length - 1] };
+    }
+    return undefined;
+  };
+
+  const getPageFractionLabel = (page: number, amount: number, surahName: string): string => {
+    const s = surahName ? ` (${surahName})` : '';
+    if (amount === 0.5) return `نصف الصفحة ${page}${s}`;
+    if (amount === 0.25) return `ربع الصفحة ${page}${s}`;
+    if (amount === 0.75) return `ثلاثة أرباع الصفحة ${page}${s}`;
+    return `جزء من الصفحة ${page}${s}`;
+  };
+
   for (let day = 0; day < numberOfDays; day++) {
     const taskDate = new Date(startDate);
     taskDate.setDate(taskDate.getDate() + day);
@@ -387,7 +418,8 @@ export const generateDailyTasks = (
     const newMemPages: number[] = [];
     let newMemUnits: number[] = [];
     let newMemVerseRange: VerseRange | undefined = undefined;
-    
+    const unitAtStartOfDay = currentUnit;
+
     let dailyAmount: number;
     
     if (isWeekly) {
@@ -426,19 +458,27 @@ export const generateDailyTasks = (
       }
     }
     
-    // المراجعة القريبة - بنفس وحدة الحفظ
-    const nearReviewAmount = isWeekly && !isMemorizationDay 
-      ? settings.dailyNearReview * 2 
+    // تسجيل الحفظ في تاريخ الأيام (قبل حساب المراجعات)
+    dayHistory.push({ pages: [...newMemPages], units: [...newMemUnits], verseRange: newMemVerseRange });
+
+    // المراجعة القريبة: اليوم الأول لا توجد، ومن اليوم الثاني نراجع ما حُفظ أمس
+    // تحجيم ذكي: إذا كان الحفظ اليومي ضئيلاً، يكون قدر المراجعة مساوياً له
+    const smartNearReview = settings.dailyNearReview === 0 ? 0
+      : settings.dailyNewMemorization < 1 ? settings.dailyNewMemorization
       : settings.dailyNearReview;
-    
-    const nearReviewRange = calculateNearReviewRange(nearReviewAmount);
-    
-    // المراجعة البعيدة - بنفس وحدة الحفظ
-    const farReviewAmount = isWeekly && !isMemorizationDay 
-      ? settings.dailyFarReview * 2 
+    const nearReviewAmount = isWeekly && !isMemorizationDay
+      ? smartNearReview * 2
+      : smartNearReview;
+    const nearReviewRange = day === 0 ? undefined : buildRangeFromHistory(dayHistory[day - 1]);
+
+    // المراجعة البعيدة
+    const farReviewAmount = isWeekly && !isMemorizationDay
+      ? settings.dailyFarReview * 2
       : settings.dailyFarReview;
-    
-    const farReviewRange = calculateFarReviewRange(farReviewAmount);
+    // بدون سور محفوظة مسبقاً: لا مراجعة بعيدة في الأسبوع الأول، ومن اليوم الثامن نراجع محفوظ قبل 7 أيام
+    const farReviewRange = hasMemoizedSurahs
+      ? calculateFarReviewRange(farReviewAmount)
+      : (day >= 7 && farReviewAmount > 0 ? buildRangeFromHistory(dayHistory[day - 7]) : undefined);
     
     // التحضير للغد
     const prepPages: number[] = [];
@@ -460,7 +500,7 @@ export const generateDailyTasks = (
     const weeklyPrepStartSurah = getSurahByPage(weeklyPrepStartPage);
     const weeklyPrepEndSurah = getSurahByPage(weeklyPrepEndPage);
     
-    const newMemSurah = getSurahByPage(newMemPages[0] || 1);
+    const newMemSurah = newMemPages.length > 0 ? getSurahByPage(newMemPages[0]) : getSurahByPage(unitAtStartOfDay);
     const currentSurah = getSurahByNumber(currentSurahNumber);
     
     const formatUnitsRange = (units: number[]): string => {
@@ -497,39 +537,67 @@ export const generateDailyTasks = (
           ? (newMemVerseRange?.surahName || currentSurah?.arabicName || '')
           : (newMemSurah?.arabicName || currentSurah?.arabicName || ''),
         pages: newMemPages,
-        unitLabel: isReviewOnlyDay 
-          ? 'يوم مراجعة' 
-          : memorizationUnit === 'verses' 
+        unitLabel: isReviewOnlyDay
+          ? 'يوم مراجعة'
+          : memorizationUnit === 'verses'
           ? formatVerseRangeLabel(newMemVerseRange)
           : memorizationUnit === 'pages' && newMemPages.length > 0
-          ? `ص${newMemPages[0]}${newMemPages.length > 1 ? `-${newMemPages[newMemPages.length - 1]}` : ''} (${newMemSurah?.arabicName || ''})`
+          ? (isDecimal
+              ? getPageFractionLabel(newMemPages[0], dailyAmount, newMemSurah?.arabicName || '')
+              : `ص${newMemPages[0]}${newMemPages.length > 1 ? `-${newMemPages[newMemPages.length - 1]}` : ''} (${newMemSurah?.arabicName || ''})`)
+          : memorizationUnit === 'pages' && isDecimal && dailyAmount > 0
+          ? getPageFractionLabel(unitAtStartOfDay, dailyAmount, newMemSurah?.arabicName || '')
           : formatUnitsRange(newMemUnits),
-        description: isReviewOnlyDay 
-          ? 'يوم مخصص للمراجعة فقط' 
+        description: isReviewOnlyDay
+          ? 'يوم مخصص للمراجعة فقط'
           : memorizationUnit === 'verses'
-          ? newMemVerseRange 
+          ? newMemVerseRange
             ? `حفظ ${newMemVerseRange.endVerse - newMemVerseRange.startVerse + 1} آيات من سورة ${newMemVerseRange.surahName}`
             : 'لا يوجد حفظ'
-          : memorizationUnit === 'pages' 
-            ? `حفظ صفحة ${newMemPages[0] || ''} - سورة ${newMemSurah?.arabicName || ''}`
+          : memorizationUnit === 'pages'
+            ? newMemPages.length > 0
+              ? `حفظ ${isDecimal ? (dailyAmount === 0.5 ? 'نصف صفحة' : dailyAmount === 0.25 ? 'ربع صفحة' : 'جزء من صفحة') + ' ' : 'صفحة '}${newMemPages[0]} - سورة ${newMemSurah?.arabicName || ''}`
+              : isDecimal
+              ? `حفظ ${dailyAmount === 0.5 ? 'نصف' : dailyAmount === 0.25 ? 'ربع' : 'جزء من'} صفحة ${unitAtStartOfDay} - سورة ${newMemSurah?.arabicName || ''}`
+              : 'لا يوجد حفظ'
             : `حفظ ${newMemUnits.length} ${memorizationUnit === 'rub' ? 'ربع' : 'حزب'}`,
         verseRange: newMemVerseRange,
       },
       nearReview: {
         surahName: nearReviewRange?.surahName || '',
         pages: [],
-        unitLabel: formatVerseRangeLabel(nearReviewRange),
-        description: nearReviewRange 
-          ? `مراجعة قريبة: ${nearReviewAmount} ${getUnitLabelPlural()} من سورة ${nearReviewRange.surahName}`
+        unitLabel: nearReviewRange
+          ? (memorizationUnit === 'pages' && nearReviewAmount > 0 && nearReviewAmount < 1
+              ? getPageFractionLabel(nearReviewRange.startVerse, nearReviewAmount, nearReviewRange.surahName)
+              : memorizationUnit === 'pages'
+              ? `ص${nearReviewRange.startVerse}${nearReviewRange.endVerse !== nearReviewRange.startVerse ? `-${nearReviewRange.endVerse}` : ''} (${nearReviewRange.surahName})`
+              : formatVerseRangeLabel(nearReviewRange))
+          : '',
+        description: nearReviewRange
+          ? memorizationUnit === 'pages'
+            ? `مراجعة قريبة: ${smartNearReview < 1 ? (smartNearReview === 0.5 ? `نصف الصفحة ${nearReviewRange.startVerse}` : `ربع الصفحة ${nearReviewRange.startVerse}`) : `صفحة ${nearReviewRange.startVerse}${nearReviewRange.endVerse !== nearReviewRange.startVerse ? `-${nearReviewRange.endVerse}` : ''}`} - سورة ${nearReviewRange.surahName}`
+            : memorizationUnit === 'verses'
+            ? `مراجعة قريبة: سورة ${nearReviewRange.surahName} آية ${nearReviewRange.startVerse}-${nearReviewRange.endVerse}`
+            : `مراجعة قريبة: ${nearReviewAmount} ${getUnitLabelPlural()} - سورة ${nearReviewRange.surahName}`
           : 'لا توجد مراجعة قريبة',
         verseRange: nearReviewRange,
       },
       farReview: {
         pages: [],
         juzNumber: 1,
-        unitLabel: formatVerseRangeLabel(farReviewRange),
-        description: farReviewRange 
-          ? `مراجعة بعيدة: ${farReviewAmount} ${getUnitLabelPlural()} من سورة ${farReviewRange.surahName}`
+        unitLabel: farReviewRange
+          ? (memorizationUnit === 'pages' && farReviewAmount > 0 && farReviewAmount < 1
+              ? getPageFractionLabel(farReviewRange.startVerse, farReviewAmount, farReviewRange.surahName)
+              : memorizationUnit === 'pages'
+              ? `ص${farReviewRange.startVerse}${farReviewRange.endVerse !== farReviewRange.startVerse ? `-${farReviewRange.endVerse}` : ''} (${farReviewRange.surahName})`
+              : formatVerseRangeLabel(farReviewRange))
+          : '',
+        description: farReviewRange
+          ? memorizationUnit === 'pages'
+            ? `مراجعة بعيدة: ${farReviewAmount < 1 ? (farReviewAmount === 0.5 ? `نصف الصفحة ${farReviewRange.startVerse}` : `ربع الصفحة ${farReviewRange.startVerse}`) : `صفحة ${farReviewRange.startVerse}${farReviewRange.endVerse !== farReviewRange.startVerse ? `-${farReviewRange.endVerse}` : ''}`} - سورة ${farReviewRange.surahName}`
+            : memorizationUnit === 'verses'
+            ? `مراجعة بعيدة: سورة ${farReviewRange.surahName} آية ${farReviewRange.startVerse}-${farReviewRange.endVerse}`
+            : `مراجعة بعيدة: ${farReviewAmount} ${getUnitLabelPlural()} - سورة ${farReviewRange.surahName}`
           : 'لا توجد مراجعة بعيدة',
         verseRange: farReviewRange,
       },
