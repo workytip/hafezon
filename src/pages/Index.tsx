@@ -6,7 +6,7 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { UserSettings, DailyTask } from '@/types/schedule';
 import { generateDailyTasks } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BookOpen, RotateCcw, Zap, Sparkles } from 'lucide-react';
+import { BookOpen, RotateCcw, Zap, Sparkles, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
@@ -98,9 +98,9 @@ const Index = () => {
                             <h3 className="text-lg font-bold">إعداد سريع</h3>
                             <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">مُوصى به</span>
                           </div>
-                          <p className="text-xs text-muted-foreground">3 أسئلة · أقل من دقيقة</p>
+                          <p className="text-xs text-muted-foreground">٤ أسئلة · أقل من دقيقة</p>
                           <ul className="text-xs text-muted-foreground space-y-1 pt-1">
-                            <li>✓ لمن لم يحفظ شيئاً بعد</li>
+                            <li>✓ للمبتدئ والحافظ على حدٍّ سواء</li>
                             <li>✓ لمن يريد البدء الآن</li>
                             <li>✓ يمكن تعديله في أي وقت</li>
                           </ul>
@@ -117,7 +117,7 @@ const Index = () => {
                         </div>
                         <div className="flex-1 space-y-2">
                           <h3 className="text-lg font-bold">إعداد مخصص</h3>
-                          <p className="text-xs text-muted-foreground">4 خطوات · 3 دقائق</p>
+                          <p className="text-xs text-muted-foreground">٤ خطوات · ٣ دقائق</p>
                           <ul className="text-xs text-muted-foreground space-y-1 pt-1">
                             <li>✓ لمن حفظ سابقاً ويريد مراجعته</li>
                             <li>✓ تحكم كامل في ترتيب المراجعة</li>
@@ -128,19 +128,31 @@ const Index = () => {
                     </button>
                   </div>
                 </div>
-              ) : formMode === 'quick' ? (
-                <QuickSettingsForm 
-                  onSubmit={handleSettingsSubmit} 
-                  onSwitchToFull={() => setFormMode('full')}
-                  initialSettings={progress?.settings}
-                />
-              ) : formMode === 'edit' ? (
-                <SettingsForm 
-                  onSubmit={handleSettingsSubmit} 
-                  initialSettings={progress?.settings}
-                />
               ) : (
-                <SettingsForm onSubmit={handleSettingsSubmit} />
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setFormMode('choice')}
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                    رجوع
+                  </button>
+
+                  {formMode === 'quick' ? (
+                    <QuickSettingsForm
+                      onSubmit={handleSettingsSubmit}
+                      onSwitchToFull={() => setFormMode('full')}
+                      initialSettings={progress?.settings}
+                    />
+                  ) : formMode === 'edit' ? (
+                    <SettingsForm
+                      onSubmit={handleSettingsSubmit}
+                      initialSettings={progress?.settings}
+                    />
+                  ) : (
+                    <SettingsForm onSubmit={handleSettingsSubmit} />
+                  )}
+                </div>
               )}
             </div>
           ) : (

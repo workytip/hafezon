@@ -20,7 +20,12 @@ const PAGES_PER_JUZ = 20;
 
 export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }: QuickSettingsFormProps) => {
   const [memorizationUnit, setMemorizationUnit] = useState<MemorizationUnit>(initialSettings?.memorizationUnit || 'pages');
-  const [currentSurahNumber, setCurrentSurahNumber] = useState<number>(initialSettings?.currentSurahNumber || 1);
+  const [direction, setDirection] = useState<'beginning' | 'end'>(
+    initialSettings ? (initialSettings.currentSurahNumber >= 78 ? 'end' : 'beginning') : 'beginning'
+  );
+  const [currentSurahNumber, setCurrentSurahNumber] = useState<number>(
+    initialSettings?.currentSurahNumber || 1
+  );
   const [currentPosition, setCurrentPosition] = useState<number>(
     initialSettings ? (initialSettings.memorizationUnit === 'verses' ? initialSettings.currentVerseNumber : initialSettings.currentPageInSurah - (surahs.find(s => s.number === initialSettings.currentSurahNumber)?.startPage || 0) + 1) : 1
   );
@@ -31,6 +36,9 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
   const [memorizedJuzCount, setMemorizedJuzCount] = useState<number>(initialSettings ? Math.round(initialSettings.currentMemorizedPages / PAGES_PER_JUZ) : 0);
 
   const selectedSurah = surahs.find(s => s.number === currentSurahNumber);
+
+  // ترتيب السور حسب اتجاه الحفظ
+  const orderedSurahs = direction === 'end' ? [...surahs].reverse() : surahs;
 
   // حساب الصفحات المحفوظة من عدد الأجزاء
   const memorizedPages = useMemo(() => {
@@ -44,6 +52,23 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
       case 'verses': return 'آية';
       default: return 'صفحة';
     }
+  };
+
+  const getAmountLabel = (amount: number): string => {
+    if (memorizationUnit === 'rub') {
+      const words: Record<number, string> = {
+        1: 'ربع واحد', 2: 'ربعان', 3: 'ثلاثة أرباع', 4: 'أربعة أرباع',
+        5: 'خمسة أرباع', 6: 'ستة أرباع', 7: 'سبعة أرباع', 8: 'ثمانية أرباع',
+      };
+      return words[amount] || `${amount} ربع`;
+    }
+    if (memorizationUnit === 'hizb') {
+      const words: Record<number, string> = {
+        1: 'حزب واحد', 2: 'حزبان', 3: 'ثلاثة أحزاب', 4: 'أربعة أحزاب',
+      };
+      return words[amount] || `${amount} حزب`;
+    }
+    return `${amount} ${getUnitLabel()}`;
   };
 
   const getPositionLabel = () => {
@@ -157,13 +182,52 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
           </div>
         </div>
 
+        {/* سؤال اتجاه الحفظ */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">من أين تحفظ القرآن؟</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => {
+                setDirection('beginning');
+                setCurrentSurahNumber(1);
+                setCurrentPosition(1);
+              }}
+              className={`p-4 rounded-xl border-2 text-center transition-all space-y-1 ${
+                direction === 'beginning'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-muted hover:border-primary/40'
+              }`}
+            >
+              <div className="text-2xl">📖</div>
+              <p className="font-semibold text-sm">من البداية</p>
+              <p className="text-xs text-muted-foreground">الفاتحة، البقرة...</p>
+            </button>
+            <button
+              onClick={() => {
+                setDirection('end');
+                setCurrentSurahNumber(78);
+                setCurrentPosition(1);
+              }}
+              className={`p-4 rounded-xl border-2 text-center transition-all space-y-1 ${
+                direction === 'end'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-muted hover:border-primary/40'
+              }`}
+            >
+              <div className="text-2xl">📚</div>
+              <p className="font-semibold text-sm">من النهاية</p>
+              <p className="text-xs text-muted-foreground">النبأ، الناس...</p>
+            </button>
+          </div>
+        </div>
+
         {/* السورة والموقع الحالي */}
         <div className="space-y-4 p-4 rounded-xl bg-muted/30 border border-muted">
           <Label className="flex items-center gap-2 text-base font-medium">
             <MapPin className="h-4 w-4 text-primary" />
             أين وصلت في حفظك؟
           </Label>
-          
+
           <Select
             value={currentSurahNumber.toString()}
             onValueChange={(v) => {
@@ -175,9 +239,9 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-60">
-              {surahs.map((surah) => (
+              {orderedSurahs.map((surah) => (
                 <SelectItem key={surah.number} value={surah.number.toString()}>
-                  {surah.number}. {surah.name}
+                  {surah.number}. {surah.arabicName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -187,7 +251,10 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{getPositionLabel()} الحالية</span>
-                <span className="text-lg font-bold text-primary">{currentPosition}</span>
+                <span className="text-lg font-bold text-primary">
+                  {currentPosition}
+                  <span className="text-sm font-normal text-muted-foreground"> من أصل {getMaxPosition()} {memorizationUnit === 'verses' ? 'آية' : 'وجه'}</span>
+                </span>
               </div>
               <Slider
                 value={[currentPosition]}
@@ -206,7 +273,7 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
           <div className="flex justify-between items-center">
             <Label className="text-base font-medium">مقدار الحفظ اليومي</Label>
             <span className="text-lg font-bold text-primary">
-              {dailyAmount} {getUnitLabel()}
+              {getAmountLabel(dailyAmount)}
             </span>
           </div>
           <Slider
@@ -230,7 +297,7 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
               <p className="text-xs text-muted-foreground mt-0.5">كمية ما ستراجعه يومياً من حفظك الأخير</p>
             </div>
             <span className="text-lg font-bold text-secondary-foreground">
-              {dailyReview} {getUnitLabel()}
+              {getAmountLabel(dailyReview)}
             </span>
           </div>
           <Slider
