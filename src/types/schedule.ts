@@ -56,6 +56,8 @@ export interface UserSettings {
   enableTomorrowPreparation?: boolean;
   enableWeeklyPreparation?: boolean;
   
+  // أيام الحفظ الجديد (0=أحد ... 6=سبت) — إذا غير محددة يُعدّ كل يوم يوم حفظ
+  memorizationDays?: number[];
   // تاريخ البدء
   startDate: string;
   // نوع الإعداد المستخدم

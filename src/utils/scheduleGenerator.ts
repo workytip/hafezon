@@ -369,8 +369,10 @@ export const generateDailyTasks = (
   // حساب معدل الحفظ
   const isWeekly = memorizationFrequency === 'weekly';
   const weeklyAmount = settings.dailyNewMemorization;
-  
+  const customMemDays = settings.memorizationDays;
+
   const getMemorizationDays = (dayOfWeek: number): boolean => {
+    if (customMemDays && customMemDays.length > 0) return customMemDays.includes(dayOfWeek);
     if (!isWeekly) return true;
     return dayOfWeek === 0 || dayOfWeek === 6;
   };
@@ -421,9 +423,11 @@ export const generateDailyTasks = (
     const unitAtStartOfDay = currentUnit;
 
     let dailyAmount: number;
-    
-    if (isWeekly) {
-      dailyAmount = isMemorizationDay ? Math.ceil(weeklyAmount / 2) : 0;
+
+    if (!isMemorizationDay) {
+      dailyAmount = 0;
+    } else if (isWeekly) {
+      dailyAmount = Math.ceil(weeklyAmount / 2);
     } else {
       dailyAmount = settings.dailyNewMemorization;
     }
@@ -466,13 +470,13 @@ export const generateDailyTasks = (
     const smartNearReview = settings.dailyNearReview === 0 ? 0
       : settings.dailyNewMemorization < 1 ? settings.dailyNewMemorization
       : settings.dailyNearReview;
-    const nearReviewAmount = isWeekly && !isMemorizationDay
-      ? smartNearReview * 2
-      : smartNearReview;
+    // أيام الراحة (مراجعة فقط): يتضاعف قدر المراجعة لاستغلال الوقت
+    const isRestDay = !isMemorizationDay;
+    const nearReviewAmount = isRestDay ? smartNearReview * 2 : smartNearReview;
     const nearReviewRange = day === 0 ? undefined : buildRangeFromHistory(dayHistory[day - 1]);
 
     // المراجعة البعيدة
-    const farReviewAmount = isWeekly && !isMemorizationDay
+    const farReviewAmount = isRestDay
       ? settings.dailyFarReview * 2
       : settings.dailyFarReview;
     // بدون سور محفوظة مسبقاً: لا مراجعة بعيدة في الأسبوع الأول، ومن اليوم الثامن نراجع محفوظ قبل 7 أيام
@@ -482,7 +486,7 @@ export const generateDailyTasks = (
     
     // التحضير للغد
     const prepPages: number[] = [];
-    const prepAmount = isWeekly ? Math.ceil(weeklyAmount / 2) : settings.dailyNewMemorization;
+    const prepAmount = (isWeekly && !customMemDays) ? Math.ceil(weeklyAmount / 2) : settings.dailyNewMemorization;
     for (let i = 0; i < prepAmount; i++) {
       const prepUnit = currentUnit + i;
       if (prepUnit <= getMaxUnit()) {
@@ -509,7 +513,7 @@ export const generateDailyTasks = (
       return `${getUnitLabel(units[0])} إلى ${getUnitLabel(units[units.length - 1])}`;
     };
 
-    const isReviewOnlyDay = isWeekly && !isMemorizationDay;
+    const isReviewOnlyDay = !isMemorizationDay;
 
     // تنسيق وصف الآيات
     const formatVerseRangeLabel = (range?: VerseRange): string => {

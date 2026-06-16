@@ -29,6 +29,13 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
   const [memorizationFrequency, setMemorizationFrequency] = useState<MemorizationFrequency>(
     initialSettings?.memorizationFrequency || 'daily'
   );
+
+  const getInitialMemDays = (): number[] => {
+    if (initialSettings?.memorizationDays) return initialSettings.memorizationDays;
+    if (initialSettings?.memorizationFrequency === 'weekly') return [0, 6];
+    return [0, 1, 2, 3, 4, 5, 6];
+  };
+  const [memorizationDays, setMemorizationDays] = useState<number[]>(getInitialMemDays);
   const [currentSurahNumber, setCurrentSurahNumber] = useState<number>(
     initialSettings?.currentSurahNumber || 1
   );
@@ -355,6 +362,8 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
       farReviewCustomOrder: farReviewOrder === 'custom' 
         ? farCustomOrder 
         : undefined,
+      // أيام الحفظ المخصصة (undefined = كل يوم)
+      memorizationDays: memorizationDays.length === 7 ? undefined : memorizationDays,
       // تفعيل/تعطيل المراحل
       enableNearReview,
       enableFarReview,
@@ -467,37 +476,53 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
               ))}
             </div>
 
-            <div className="mt-8 p-4 bg-accent/50 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <Label className="text-base font-semibold">وتيرة الحفظ</Label>
+            <div className="mt-8 p-4 bg-accent/50 rounded-xl space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <Label className="text-base font-semibold">أيام الحفظ الجديد</Label>
               </div>
-              <RadioGroup
-                value={memorizationFrequency}
-                onValueChange={(value) => setMemorizationFrequency(value as MemorizationFrequency)}
-                className="grid grid-cols-2 gap-4"
-              >
-                <div>
-                  <RadioGroupItem value="daily" id="freq-daily" className="peer sr-only" />
-                  <Label
-                    htmlFor="freq-daily"
-                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-border bg-background p-4 hover:bg-accent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all"
-                  >
-                    <Clock className="h-5 w-5" />
-                    <span className="font-semibold">يومياً</span>
-                  </Label>
-                </div>
-                <div>
-                  <RadioGroupItem value="weekly" id="freq-weekly" className="peer sr-only" />
-                  <Label
-                    htmlFor="freq-weekly"
-                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-border bg-background p-4 hover:bg-accent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all"
-                  >
-                    <Calendar className="h-5 w-5" />
-                    <span className="font-semibold">أسبوعياً</span>
-                  </Label>
-                </div>
-              </RadioGroup>
+              <p className="text-xs text-muted-foreground -mt-2">اختر الأيام التي ستحفظ فيها — باقي الأيام مراجعة فقط</p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {[
+                  { day: 0, label: 'أحد' },
+                  { day: 1, label: 'اثنين' },
+                  { day: 2, label: 'ثلاثاء' },
+                  { day: 3, label: 'أربعاء' },
+                  { day: 4, label: 'خميس' },
+                  { day: 5, label: 'جمعة' },
+                  { day: 6, label: 'سبت' },
+                ].map(({ day, label }) => {
+                  const isSelected = memorizationDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected && memorizationDays.length === 1) return; // لا يجوز تفريغ كل الأيام
+                        setMemorizationDays(prev =>
+                          isSelected ? prev.filter(d => d !== day) : [...prev, day].sort()
+                        );
+                      }}
+                      className={`py-2.5 rounded-xl border-2 text-center text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {memorizationDays.length < 7 && (
+                <p className="text-xs text-muted-foreground">
+                  ✅ أيام الحفظ: <span className="font-medium text-foreground">{memorizationDays.length} أيام</span>
+                  {' · '}أيام المراجعة فقط: <span className="font-medium text-foreground">{7 - memorizationDays.length} أيام</span>
+                </p>
+              )}
+              {memorizationDays.length === 7 && (
+                <p className="text-xs text-muted-foreground">✅ حفظ جديد كل يوم</p>
+              )}
             </div>
           </div>
         )}
@@ -650,7 +675,7 @@ export const SettingsForm = ({ onSubmit, initialSettings }: SettingsFormProps) =
             <div className="grid grid-cols-1 gap-4 pt-1">
               <div className="space-y-2">
                 <Label className="text-base font-semibold">
-                  كم {getUnitLabel()} جديدة {memorizationFrequency === 'daily' ? 'يومياً' : 'أسبوعياً'}؟
+                  كم {getUnitLabel()} جديدة في كل يوم حفظ؟
                 </Label>
                 {memorizationUnit === 'pages' ? (
                   <Select value={dailyNewMemorizationDecimal} onValueChange={setDailyNewMemorizationDecimal}>

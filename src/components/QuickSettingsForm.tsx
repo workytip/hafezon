@@ -30,6 +30,10 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
     initialSettings ? (initialSettings.memorizationUnit === 'verses' ? initialSettings.currentVerseNumber : initialSettings.currentPageInSurah - (surahs.find(s => s.number === initialSettings.currentSurahNumber)?.startPage || 0) + 1) : 1
   );
   const [dailyAmount, setDailyAmount] = useState<number>(initialSettings?.dailyNewMemorization || 1);
+  const [restDaysCount, setRestDaysCount] = useState<number>(() => {
+    if (!initialSettings?.memorizationDays) return 0;
+    return 7 - initialSettings.memorizationDays.length;
+  });
   const [dailyReview, setDailyReview] = useState<number>(initialSettings?.dailyNearReview ? initialSettings.dailyNearReview * 2 : 5);
   const [hasFarReview, setHasFarReview] = useState<boolean>(initialSettings ? (initialSettings.dailyFarReview || 0) > 0 : false);
   const [farReviewSurahNumber, setFarReviewSurahNumber] = useState<number>(initialSettings?.farReviewSurahNumber || 1);
@@ -93,9 +97,11 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
           : selectedSurah.startPage)
       : 1;
 
+    const memDays = getMemorizationDaysFromRest(restDaysCount);
     const settings: UserSettings = {
       memorizationUnit,
       memorizationFrequency: 'daily',
+      memorizationDays: memDays,
       currentSurahNumber,
       currentPageInSurah: startPage,
       currentRubNumber: getRubByPage(startPage)?.number || 1,
@@ -116,6 +122,20 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
       setupMode: 'quick',
     };
     onSubmit(settings);
+  };
+
+  // السبت=6، الجمعة=5، الخميس=4 — أيام الراحة الافتراضية بالأولوية
+  const getMemorizationDaysFromRest = (restCount: number): number[] | undefined => {
+    if (restCount === 0) return undefined;
+    const restDays = [6, 5, 4].slice(0, restCount);
+    return [0, 1, 2, 3, 4, 5, 6].filter(d => !restDays.includes(d));
+  };
+
+  const getRestDaysLabel = (count: number): string => {
+    if (count === 0) return 'كل يوم';
+    const names: Record<number, string> = { 4: 'الخميس', 5: 'الجمعة', 6: 'السبت' };
+    const days = [6, 5, 4].slice(0, count).reverse().map(d => names[d]);
+    return days.join(' و');
   };
 
   const getMaxDailyAmount = () => {
@@ -284,6 +304,39 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
             step={1}
             className="py-2"
           />
+        </div>
+
+        {/* أيام الراحة الأسبوعية */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-base font-medium">أيام الراحة الأسبوعية</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">أيام بدون حفظ جديد — مراجعة فقط</p>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { count: 0, label: 'لا راحة' },
+              { count: 1, label: 'يوم' },
+              { count: 2, label: 'يومان' },
+              { count: 3, label: '٣ أيام' },
+            ].map(({ count, label }) => (
+              <button
+                key={count}
+                onClick={() => setRestDaysCount(count)}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  restDaysCount === count
+                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                    : 'border-muted hover:border-primary/50'
+                }`}
+              >
+                <span className="block text-sm font-semibold">{label}</span>
+              </button>
+            ))}
+          </div>
+          {restDaysCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              🗓 أيام الراحة: <span className="font-medium text-foreground">{getRestDaysLabel(restDaysCount)}</span>
+            </p>
+          )}
         </div>
 
         {/* المراجعة اليومية */}
