@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>حافظون</title>
+    <meta name="description" content="تتبع حفظ القرآن الكريم والأهداف اليومية" />
+    <meta name="author" content="حافظون" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="حافظون" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="حافظون" />
+    <meta property="og:description" content="تتبع حفظ القرآن الكريم والأهداف اليومية" />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script>
+      // Restore path redirected via 404.html for GitHub Pages SPA routing.
+      (function () {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        var search = location.search;
+        if (search) {
+          var params = new URLSearchParams(search);
+          var p = params.get('p');
+          if (p) {
+            var q = params.get('q');
+            var url = p + (q ? '?' + q.replace(/~and~/g, '&') : '') + location.hash;
+            history.replaceState(null, null, url);
+          }
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-DfkOBj-q.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-u7L-Q94J.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
