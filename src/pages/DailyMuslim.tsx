@@ -22,6 +22,7 @@ import { DailyMuslimExportTable } from '@/components/DailyMuslimExportTable';
 import { MiniPomodoro } from '@/components/MiniPomodoro';
 import { PrayerTimesBar, PrayerTimeBadge } from '@/components/PrayerTimesBar';
 import { PrayerKey } from '@/hooks/usePrayerTimes';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const toDateKey = (d: Date) => {
   const y = d.getFullYear();
@@ -44,6 +45,11 @@ const formatArabicShort = (d: Date) =>
 
 const DailyMuslim = () => {
   const { progress, isLoaded, saveSettings, updateDayProgress, getDayProgress, clearProgress } = useDailyMuslimStorage();
+  const {
+    progress: hafezonProgress,
+    updateDailyProgress: updateHafezProgress,
+    getDailyProgress: getHafezProgress,
+  } = useLocalStorage();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
@@ -70,6 +76,13 @@ const DailyMuslim = () => {
   const totalGoals = goals.length;
   const completedGoals = goals.filter(g => dayProgress[g.id]).length;
   const dayPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
+
+  const hafezonTask = useMemo(
+    () => hafezonProgress?.tasks?.find(t => t.date === selectedKey) ?? null,
+    [hafezonProgress, selectedKey]
+  );
+  const isRestDay = hafezonTask?.newMemorization?.unitLabel === 'يوم مراجعة';
+  const hafezDayProgress = getHafezProgress(selectedKey);
 
   // Arab week starts on Saturday (day 6). Find Saturday of the week containing selectedDate.
   const weekDates = useMemo(() => {
@@ -338,17 +351,20 @@ const DailyMuslim = () => {
           {/* أزرار التصدير */}
           <Card className="card-islamic">
             <CardContent className="py-4">
-              <div className="flex flex-wrap items-center gap-2 justify-between">
-                <p className="text-sm font-medium text-muted-foreground">للطباعة:</p>
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">تحميل الجدول</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">احفظ جدولك كصورة أو PDF للطباعة أو المشاركة</p>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('day', 'image')} className="gap-1">
-                    <ImageIcon className="h-4 w-4" />صورة اليوم
+                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('day', 'image')} className="gap-1.5">
+                    <ImageIcon className="h-4 w-4" />تحميل صورة اليوم
                   </Button>
-                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('week', 'pdf')} className="gap-1">
-                    <FileText className="h-4 w-4" />PDF أسبوعي
+                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('week', 'pdf')} className="gap-1.5">
+                    <FileText className="h-4 w-4" />تحميل PDF الأسبوع
                   </Button>
-                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('month', 'pdf')} className="gap-1">
-                    <FileText className="h-4 w-4" />PDF شهري
+                  <Button size="sm" variant="outline" disabled={isExporting} onClick={() => runExport('month', 'pdf')} className="gap-1.5">
+                    <FileText className="h-4 w-4" />تحميل PDF الشهر
                   </Button>
                 </div>
               </div>
@@ -396,9 +412,27 @@ const DailyMuslim = () => {
                 {/* الأهداف — شبكة بطاقات (3 في الصف) */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {goalsBySection.map(({ section, items }) => {
-                    if (items.length === 0) return null;
+                    const hasFajrMemTask = section.id === 'fajr' && !!hafezonTask && !isRestDay;
+                    const hasAsrMemTask = section.id === 'asr' && !!hafezonTask && (
+                      hafezonTask.nearReview.pages.length > 0 || hafezonTask.farReview.pages.length > 0
+                    );
+
+                    if (items.length === 0 && !hasFajrMemTask && !hasAsrMemTask) return null;
+
                     const sectionDone = items.filter(g => dayProgress[g.id]).length;
-                    const allDone = sectionDone === items.length;
+                    let hafezTotal = 0, hafezDone = 0;
+                    if (hasFajrMemTask) {
+                      hafezTotal++;
+                      if (hafezDayProgress.newMemorization) hafezDone++;
+                    }
+                    if (hasAsrMemTask) {
+                      if (hafezonTask!.nearReview.pages.length > 0) { hafezTotal++; if (hafezDayProgress.nearReview) hafezDone++; }
+                      if (hafezonTask!.farReview.pages.length > 0) { hafezTotal++; if (hafezDayProgress.farReview) hafezDone++; }
+                    }
+                    const totalItems = items.length + hafezTotal;
+                    const totalDone = sectionDone + hafezDone;
+                    const allDone = totalItems > 0 && totalDone === totalItems;
+
                     return (
                       <div
                         key={section.id}
@@ -425,7 +459,7 @@ const DailyMuslim = () => {
                             'text-xs font-semibold px-2 py-0.5 rounded-full',
                             allDone ? 'bg-primary text-primary-foreground' : 'bg-primary/15 text-primary'
                           )}>
-                            {sectionDone}/{items.length}
+                            {totalDone}/{totalItems}
                           </span>
                         </div>
                         {/* قائمة الأهداف */}
@@ -456,6 +490,48 @@ const DailyMuslim = () => {
                               </div>
                             );
                           })}
+
+                          {/* مهمة الحفظ الجديد — بعد الفجر */}
+                          {hasFajrMemTask && (
+                            <>
+                              <div className="px-4 py-1.5 bg-primary/5 flex items-center gap-1.5 border-t border-primary/15">
+                                <BookOpen className="h-3 w-3 text-primary" />
+                                <span className="text-[10px] font-semibold text-primary">حفظ القرآن</span>
+                              </div>
+                              <HafezRow
+                                icon="📖"
+                                label={hafezonTask!.newMemorization.description}
+                                checked={hafezDayProgress.newMemorization}
+                                onToggle={() => updateHafezProgress(selectedKey, 'newMemorization', !hafezDayProgress.newMemorization)}
+                              />
+                            </>
+                          )}
+
+                          {/* مهام المراجعة — بعد العصر */}
+                          {hasAsrMemTask && (
+                            <>
+                              <div className="px-4 py-1.5 bg-primary/5 flex items-center gap-1.5 border-t border-primary/15">
+                                <BookOpen className="h-3 w-3 text-primary" />
+                                <span className="text-[10px] font-semibold text-primary">مراجعة القرآن</span>
+                              </div>
+                              {hafezonTask!.nearReview.pages.length > 0 && (
+                                <HafezRow
+                                  icon="🔄"
+                                  label={hafezonTask!.nearReview.description}
+                                  checked={hafezDayProgress.nearReview}
+                                  onToggle={() => updateHafezProgress(selectedKey, 'nearReview', !hafezDayProgress.nearReview)}
+                                />
+                              )}
+                              {hafezonTask!.farReview.pages.length > 0 && (
+                                <HafezRow
+                                  icon="📚"
+                                  label={hafezonTask!.farReview.description}
+                                  checked={hafezDayProgress.farReview}
+                                  onToggle={() => updateHafezProgress(selectedKey, 'farReview', !hafezDayProgress.farReview)}
+                                />
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -679,5 +755,27 @@ const DailyMuslim = () => {
     </div>
   );
 };
+
+const HafezRow = ({ icon, label, checked, onToggle }: {
+  icon: string; label: string; checked: boolean; onToggle: () => void;
+}) => (
+  <div className={cn(
+    'flex items-center gap-3 px-4 py-2.5 transition-colors',
+    checked ? 'bg-primary/5' : 'hover:bg-accent/40'
+  )}>
+    <Checkbox
+      checked={checked}
+      onCheckedChange={onToggle}
+      className="h-4 w-4 cursor-pointer rounded-full shrink-0"
+    />
+    <span className="text-base shrink-0">{icon}</span>
+    <span
+      onClick={onToggle}
+      className={cn('flex-1 text-sm cursor-pointer leading-snug', checked && 'line-through text-muted-foreground')}
+    >
+      {label}
+    </span>
+  </div>
+);
 
 export default DailyMuslim;

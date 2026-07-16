@@ -11,11 +11,15 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+const toEmail = (username: string) =>
+  `${username.trim().toLowerCase()}@hafezon.app`;
+
 export function AuthModal({ open, onClose }: AuthModalProps) {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -23,8 +27,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   useEffect(() => {
     if (open) {
       setMode('signin');
-      setEmail('');
+      setUsername('');
       setPassword('');
+      setConfirmPassword('');
       setError(null);
       setSuccess(false);
     }
@@ -33,20 +38,31 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username.trim())) {
+      setError('اسم المستخدم يجب أن يكون بين 3 و20 حرفاً (أحرف إنجليزية، أرقام، أو شرطة سفلية)');
+      return;
+    }
+
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('كلمة المرور وتأكيدها غير متطابقتين، تحقق وأعد المحاولة.');
+      return;
+    }
+
     setLoading(true);
+    const email = toEmail(username);
 
-    const { error } = mode === 'signin'
-      ? await signIn(email, password)
-      : await signUp(email, password);
-
-    setLoading(false);
-
-    if (error) {
-      setError(error);
-    } else if (mode === 'signup') {
-      setSuccess(true);
+    if (mode === 'signin') {
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) setError(error);
+      else onClose();
     } else {
-      onClose();
+      const { error, loggedIn } = await signUp(email, password);
+      setLoading(false);
+      if (error) setError(error);
+      else if (loggedIn) onClose();
+      else setSuccess(true);
     }
   };
 
@@ -61,31 +77,40 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       <DialogContent className="sm:max-w-sm" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-right">
-            {mode === 'signin' ? 'تسجيل الدخول' : 'إنشاء حساب'}
+            {mode === 'signin' ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
           </DialogTitle>
         </DialogHeader>
 
         {success ? (
-          <div className="py-4 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
-              تم إنشاء حسابك! تحقق من بريدك الإلكتروني لتفعيل الحساب.
-            </p>
-            <Button onClick={onClose} className="w-full">إغلاق</Button>
+          <div className="py-6 text-center space-y-4">
+            <div className="text-4xl">🎉</div>
+            <div className="space-y-1.5">
+              <p className="font-semibold text-foreground">أهلاً بك في حافظون!</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                تم إنشاء حسابك بنجاح.<br />
+                يمكنك الآن تسجيل الدخول والبدء في رحلة الحفظ.
+              </p>
+            </div>
+            <Button onClick={switchMode} className="w-full">تسجيل الدخول الآن</Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Label htmlFor="username">اسم المستخدم</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="example@email.com"
+                id="username"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="مثال: ahmad_123"
                 required
                 dir="ltr"
                 className="text-left"
+                autoComplete="username"
               />
+              {mode === 'signup' && (
+                <p className="text-xs text-muted-foreground">أحرف إنجليزية وأرقام وشرطة سفلية فقط (3–20 حرف)</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -99,8 +124,29 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                 required
                 dir="ltr"
                 minLength={6}
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               />
+              {mode === 'signup' && (
+                <p className="text-xs text-muted-foreground">6 أحرف على الأقل</p>
+              )}
             </div>
+
+            {mode === 'signup' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  dir="ltr"
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-destructive text-right">{error}</p>
@@ -108,7 +154,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-              {mode === 'signin' ? 'دخول' : 'إنشاء حساب'}
+              {mode === 'signin' ? 'دخول' : 'إنشاء الحساب'}
             </Button>
 
             <button
@@ -117,8 +163,8 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               className="w-full text-sm text-muted-foreground hover:text-primary text-center transition-colors"
             >
               {mode === 'signin'
-                ? 'ليس لديك حساب؟ سجّل الآن'
-                : 'لديك حساب؟ سجّل دخولك'}
+                ? 'ليس لديك حساب؟ سجّل الآن مجاناً'
+                : 'لديك حساب بالفعل؟ سجّل دخولك'}
             </button>
           </form>
         )}

@@ -364,18 +364,20 @@ export const WeeklySchedule = ({
         </div>
 
         {/* الصف الثاني: أزرار التصدير مع شرح */}
-        <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/50 rounded-lg">
-          <span className="text-sm text-muted-foreground ml-2">📄 تصدير للطباعة:</span>
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <div>
+            <p className="text-sm font-semibold text-foreground">تحميل الجدول</p>
+            <p className="text-xs text-muted-foreground">احفظ جدولك كصورة أو PDF للطباعة أو المشاركة</p>
+          </div>
           <Button
             variant="outline"
             size="sm"
             onClick={exportAsImage}
             disabled={isExporting}
             className="gap-2"
-            title="تحميل صورة للأسبوع للطباعة"
           >
             <ImageIcon className="h-4 w-4" />
-            صورة الأسبوع
+            تحميل جدول الأسبوع كصورة
           </Button>
           <Button
             variant="outline"
@@ -383,10 +385,9 @@ export const WeeklySchedule = ({
             onClick={exportAsPDF}
             disabled={isExporting}
             className="gap-2"
-            title="تحميل ملف PDF للأسبوع للطباعة"
           >
             <FileText className="h-4 w-4" />
-            PDF الأسبوع
+            تحميل PDF الأسبوع
           </Button>
           <Button
             variant="outline"
@@ -394,10 +395,9 @@ export const WeeklySchedule = ({
             onClick={exportMonthAsPDF}
             disabled={isExporting}
             className="gap-2 bg-primary/10 border-primary/30 hover:bg-primary/20"
-            title="تحميل ملف PDF لـ 4 أسابيع للطباعة"
           >
             <CalendarDays className="h-4 w-4" />
-            PDF الشهر
+            تحميل PDF الشهر
           </Button>
         </div>
       </div>

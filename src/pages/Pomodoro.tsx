@@ -82,7 +82,7 @@ export default function Pomodoro() {
 
     const dayGoalProgress = dailyMuslimProgress?.dailyProgress?.[today] ?? {};
     (dailyMuslimProgress?.settings?.goals ?? [])
-      .filter(g => !dayGoalProgress[g.id])
+      .filter(g => !dayGoalProgress[g.id] && !g.label.includes('صلاة') && !g.label.includes('سنة') && !g.label.includes('السنن'))
       .forEach(g => tasks.push({ label: `${g.icon} ${g.label}` }));
 
     return tasks;
