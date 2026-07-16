@@ -3,12 +3,12 @@ import { DailyTask } from '@/types/schedule';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  BookOpen,
-  RefreshCw,
+import { 
+  BookOpen, 
+  RefreshCw, 
   RotateCcw,
-  Clock,
-  ChevronRight,
+  Clock, 
+  ChevronRight, 
   ChevronLeft,
   CheckCircle2,
   Calendar,
@@ -25,7 +25,6 @@ import { toast } from 'sonner';
 import { ExportTable } from './ExportTable';
 import { MonthExportTable } from './MonthExportTable';
 import { MiniPomodoro } from './MiniPomodoro';
-import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 
 interface WeeklyScheduleProps {
   tasks: DailyTask[];
@@ -42,12 +41,6 @@ interface WeeklyScheduleProps {
   };
 }
 
-const TODAY = new Date().toISOString().split('T')[0];
-
-function fmt(d: Date) {
-  return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
 export const WeeklySchedule = ({
   tasks,
   onReset,
@@ -60,7 +53,6 @@ export const WeeklySchedule = ({
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const monthExportRef = useRef<HTMLDivElement>(null);
-  const { times: prayerTimes } = usePrayerTimes();
 
   const weekTasks = tasks.slice(currentWeekStart, currentWeekStart + 7);
   
@@ -499,123 +491,83 @@ export const WeeklySchedule = ({
                 </CardHeader>
                 
                 <CardContent className="pt-0">
-                  {/* جدول الصلوات */}
-                  {(() => {
-                    const isRestDay = task.newMemorization.unitLabel === 'يوم مراجعة';
-                    const isToday = task.date === TODAY;
-                    const hasNearReview = !!task.nearReview.verseRange;
-                    const hasFarReview = !!task.farReview.verseRange;
-                    const hasAnyReview = (enabledStages.nearReview && hasNearReview) || (enabledStages.farReview && hasFarReview);
+                  <div className={cn(
+                    "grid grid-cols-1 gap-3 sm:grid-cols-2",
+                    [, 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5'][Math.min(activeTaskCount, 5)]
+                  )}>
+                    {/* الحفظ الجديد */}
+                    <TaskItem
+                      icon={<BookOpen className="h-4 w-4" />}
+                      title="الحفظ الجديد"
+                      description={task.newMemorization.verseRange
+                        ? task.newMemorization.unitLabel
+                        : task.newMemorization.unitLabel || `سورة ${task.newMemorization.surahName}`}
+                      subDescription={task.newMemorization.verseRange
+                        ? task.newMemorization.description
+                        : undefined}
+                      pages={task.newMemorization.pages}
+                      completed={completion.newMemorization}
+                      onToggle={() => toggleTaskCompletion(task.date, 'newMemorization', task.newMemorization.pages.length)}
+                      variant="primary"
+                      taskLabel={`📖 الحفظ الجديد - ${task.newMemorization.description || task.newMemorization.surahName}`}
+                    />
 
-                    return (
-                      <div className="space-y-0">
-                        {/* الفجر */}
-                        <PrayerRow
-                          icon="🌅" label="الفجر"
-                          time={isToday && prayerTimes ? fmt(prayerTimes.fajr) : undefined}
-                        >
-                          {isRestDay ? (
-                            <HisnBadge text="أذكار الصباح" />
-                          ) : (
-                            <TaskItem
-                              icon={<BookOpen className="h-4 w-4" />}
-                              title="الحفظ الجديد"
-                              description={task.newMemorization.verseRange
-                                ? task.newMemorization.unitLabel
-                                : task.newMemorization.unitLabel || `سورة ${task.newMemorization.surahName}`}
-                              subDescription={task.newMemorization.verseRange ? task.newMemorization.description : undefined}
-                              pages={task.newMemorization.pages}
-                              completed={completion.newMemorization}
-                              onToggle={() => toggleTaskCompletion(task.date, 'newMemorization', task.newMemorization.pages.length)}
-                              variant="primary"
-                              taskLabel={`📖 الحفظ الجديد - ${task.newMemorization.description || task.newMemorization.surahName}`}
-                            />
-                          )}
-                        </PrayerRow>
+                    {/* المراجعة القريبة */}
+                    {enabledStages.nearReview && (
+                      <TaskItem
+                        icon={<RefreshCw className="h-4 w-4" />}
+                        title="المراجعة القريبة"
+                        description={task.nearReview.unitLabel || `سورة ${task.nearReview.surahName}`}
+                        pages={task.nearReview.pages}
+                        completed={completion.nearReview}
+                        onToggle={() => toggleTaskCompletion(task.date, 'nearReview')}
+                        variant="secondary"
+                        taskLabel={`🔄 المراجعة القريبة - ${task.nearReview.description || task.nearReview.surahName}`}
+                      />
+                    )}
 
-                        {/* الظهر */}
-                        <PrayerRow
-                          icon="☀️" label="الظهر"
-                          time={isToday && prayerTimes ? fmt(prayerTimes.dhuhr) : undefined}
-                        >
-                          <HisnBadge text="حصن المسلم" />
-                        </PrayerRow>
+                    {/* المراجعة البعيدة */}
+                    {enabledStages.farReview && (
+                      <TaskItem
+                        icon={<RefreshCw className="h-4 w-4" />}
+                        title="المراجعة البعيدة"
+                        description={task.farReview.unitLabel || `الجزء ${task.farReview.juzNumber}`}
+                        pages={task.farReview.pages}
+                        completed={completion.farReview}
+                        onToggle={() => toggleTaskCompletion(task.date, 'farReview')}
+                        variant="accent"
+                        taskLabel={`📚 المراجعة البعيدة - ${task.farReview.description || `الجزء ${task.farReview.juzNumber}`}`}
+                      />
+                    )}
 
-                        {/* العصر */}
-                        <PrayerRow
-                          icon="🌇" label="العصر"
-                          time={isToday && prayerTimes ? fmt(prayerTimes.asr) : undefined}
-                        >
-                          {enabledStages.nearReview && hasNearReview && (
-                            <TaskItem
-                              icon={<RefreshCw className="h-4 w-4" />}
-                              title="المراجعة القريبة"
-                              description={task.nearReview.unitLabel || `سورة ${task.nearReview.surahName}`}
-                              pages={task.nearReview.pages}
-                              completed={completion.nearReview}
-                              onToggle={() => toggleTaskCompletion(task.date, 'nearReview')}
-                              variant="secondary"
-                              taskLabel={`🔄 المراجعة القريبة - ${task.nearReview.description || task.nearReview.surahName}`}
-                            />
-                          )}
-                          {enabledStages.farReview && hasFarReview && (
-                            <TaskItem
-                              icon={<RefreshCw className="h-4 w-4" />}
-                              title="المراجعة البعيدة"
-                              description={task.farReview.unitLabel || `الجزء ${task.farReview.juzNumber}`}
-                              pages={task.farReview.pages}
-                              completed={completion.farReview}
-                              onToggle={() => toggleTaskCompletion(task.date, 'farReview')}
-                              variant="accent"
-                              taskLabel={`📚 المراجعة البعيدة - ${task.farReview.description || `الجزء ${task.farReview.juzNumber}`}`}
-                            />
-                          )}
-                          {!hasAnyReview && <HisnBadge text="حصن المسلم" />}
-                        </PrayerRow>
+                    {/* التحضير للغد */}
+                    {enabledStages.tomorrowPreparation && (
+                      <TaskItem
+                        icon={<Clock className="h-4 w-4" />}
+                        title="التحضير للغد"
+                        description={task.tomorrowPreparation.description || "القراءة والاستماع"}
+                        pages={task.tomorrowPreparation.pages}
+                        completed={completion.preparation}
+                        onToggle={() => toggleTaskCompletion(task.date, 'preparation')}
+                        variant="muted"
+                        taskLabel={`⏰ التحضير للغد`}
+                      />
+                    )}
 
-                        {/* المغرب */}
-                        <PrayerRow
-                          icon="🌆" label="المغرب"
-                          time={isToday && prayerTimes ? fmt(prayerTimes.maghrib) : undefined}
-                        >
-                          <HisnBadge text="حصن المسلم" />
-                          {enabledStages.tomorrowPreparation && (
-                            <TaskItem
-                              icon={<Clock className="h-4 w-4" />}
-                              title="التحضير للغد"
-                              description={task.tomorrowPreparation.description || 'القراءة والاستماع'}
-                              pages={task.tomorrowPreparation.pages}
-                              completed={completion.preparation}
-                              onToggle={() => toggleTaskCompletion(task.date, 'preparation')}
-                              variant="muted"
-                              taskLabel="⏰ التحضير للغد"
-                            />
-                          )}
-                        </PrayerRow>
-
-                        {/* العشاء */}
-                        <PrayerRow
-                          icon="🌙" label="العشاء"
-                          time={isToday && prayerTimes ? fmt(prayerTimes.isha) : undefined}
-                          isLast
-                        >
-                          <HisnBadge text="حصن المسلم" />
-                          {enabledStages.weeklyPreparation && (
-                            <TaskItem
-                              icon={<Headphones className="h-4 w-4" />}
-                              title="التحضير الأسبوعي"
-                              description={task.weeklyPreparation.description}
-                              pages={[]}
-                              completed={completion.weeklyPreparation}
-                              onToggle={() => toggleTaskCompletion(task.date, 'weeklyPreparation')}
-                              variant="muted"
-                              taskLabel="🎧 التحضير الأسبوعي"
-                            />
-                          )}
-                        </PrayerRow>
-                      </div>
-                    );
-                  })()}
+                    {/* التحضير الأسبوعي */}
+                    {enabledStages.weeklyPreparation && (
+                      <TaskItem
+                        icon={<Headphones className="h-4 w-4" />}
+                        title="التحضير الأسبوعي"
+                        description={task.weeklyPreparation.description}
+                        pages={[]}
+                        completed={completion.weeklyPreparation}
+                        onToggle={() => toggleTaskCompletion(task.date, 'weeklyPreparation')}
+                        variant="muted"
+                        taskLabel={`🎧 التحضير الأسبوعي`}
+                      />
+                    )}
+        </div>
                 </CardContent>
               </Card>
             );
@@ -712,44 +664,6 @@ export const WeeklySchedule = ({
     </div>
   );
 };
-
-// ─── مكوّن صف الصلاة (timeline) ───────────────────────────────────────────────
-const PrayerRow = ({
-  icon, label, time, isLast = false, children,
-}: {
-  icon: string;
-  label: string;
-  time?: string;
-  isLast?: boolean;
-  children: React.ReactNode;
-}) => (
-  <div className="flex gap-3">
-    {/* الخط الزمني */}
-    <div className="flex flex-col items-center shrink-0">
-      <div className="w-9 h-9 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center text-base z-10">
-        {icon}
-      </div>
-      {!isLast && <div className="w-px flex-1 bg-primary/15 my-0.5" style={{ minHeight: 14 }} />}
-    </div>
-
-    {/* المحتوى */}
-    <div className={cn('flex-1', isLast ? 'pb-0' : 'pb-3')}>
-      <div className="flex items-center gap-2 mb-1.5 h-9">
-        <span className="text-sm font-bold">{label}</span>
-        {time && <span className="text-xs text-muted-foreground font-mono">{time}</span>}
-      </div>
-      <div className="space-y-1.5">{children}</div>
-    </div>
-  </div>
-);
-
-// ─── شارة حصن المسلم ──────────────────────────────────────────────────────────
-const HisnBadge = ({ text }: { text: string }) => (
-  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5 w-fit">
-    <span>🛡️</span>
-    <span>{text}</span>
-  </div>
-);
 
 interface TaskItemProps {
   icon: React.ReactNode;
