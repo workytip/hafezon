@@ -111,26 +111,64 @@ export const WeeklySchedule = ({
 
   const weekNumber = Math.floor(currentWeekStart / 7) + 1;
 
+  // التقاط عنصر التصدير بأعلى دقة يتحملها الجهاز.
+  // متصفحات الجوال ترفض اللوحات الضخمة (iOS حوالي 16.7 مليون بكسل) فتخرج الصورة مقصوصة أو مشوشة،
+  // لذلك نحسب المقياس حسب حجم العنصر بدل رقم ثابت.
+  const captureElement = async (element: HTMLElement, desiredScale: number) => {
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const width = element.scrollWidth;
+    const height = element.scrollHeight;
+    const MAX_AREA = 16_000_000;
+    const MAX_SIDE = 8_000;
+    const scale = Math.max(1, Math.min(
+      desiredScale,
+      Math.sqrt(MAX_AREA / (width * height)),
+      MAX_SIDE / width,
+      MAX_SIDE / height,
+    ));
+
+    return html2canvas(element, {
+      backgroundColor: '#ffffff',
+      scale,
+      useCORS: true,
+      logging: false,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height,
+      scrollX: 0,
+      scrollY: 0,
+      // نضع النسخة في أعلى يسار الصفحة حتى لا يتأثر الالتقاط بالتمرير أو بالإزاحة خارج الشاشة
+      onclone: (_doc, clone) => {
+        const wrapper = clone.parentElement;
+        if (wrapper) {
+          wrapper.style.left = '0';
+          wrapper.style.top = '0';
+        }
+      },
+    });
+  };
+
   const exportAsImage = async () => {
     if (!exportRef.current) return;
-    
+
     setIsExporting(true);
     toast.info('جاري تحضير الصورة بجودة عالية...');
-    
+
     try {
-      const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 6, // جودة أعلى جداً
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        windowWidth: 1600,
-      });
-      
+      const canvas = await captureElement(exportRef.current, 3);
+
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to create image');
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `quran-schedule-week-${weekNumber}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
       
       toast.success('تم تصدير الجدول كصورة بجودة عالية');
     } catch (error) {
@@ -148,18 +186,7 @@ export const WeeklySchedule = ({
     toast.info('جاري تحضير ملف PDF...');
 
     try {
-      // انتظر تحميل الخطوط قبل الالتقاط لتجنب تشوه/فراغات
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
-
-      const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 3, // تقليل الحجم لتسريع التصدير وتجنب ملفات PDF تالفة
-        useCORS: true,
-        logging: false,
-        windowWidth: 1400,
-      });
+      const canvas = await captureElement(exportRef.current, 3);
 
       // JPEG يقلل الحجم بشكل كبير مقارنة بـ PNG ويمنع فساد الملف عند الضخامة
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
@@ -266,6 +293,11 @@ export const WeeklySchedule = ({
           useCORS: true,
           logging: false,
           windowWidth: containerWidth + 48,
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (_doc, clone) => {
+            clone.style.left = '0';
+          },
         });
 
         document.body.removeChild(tempContainer);
@@ -517,7 +549,7 @@ export const WeeklySchedule = ({
                       <TaskItem
                         icon={<RefreshCw className="h-4 w-4" />}
                         title="المراجعة القريبة"
-                        description={task.nearReview.unitLabel || `سورة ${task.nearReview.surahName}`}
+                        description={task.nearReview.unitLabel || task.nearReview.description}
                         pages={task.nearReview.pages}
                         completed={completion.nearReview}
                         onToggle={() => toggleTaskCompletion(task.date, 'nearReview')}
@@ -531,12 +563,12 @@ export const WeeklySchedule = ({
                       <TaskItem
                         icon={<RefreshCw className="h-4 w-4" />}
                         title="المراجعة البعيدة"
-                        description={task.farReview.unitLabel || `الجزء ${task.farReview.juzNumber}`}
+                        description={task.farReview.unitLabel || task.farReview.description}
                         pages={task.farReview.pages}
                         completed={completion.farReview}
                         onToggle={() => toggleTaskCompletion(task.date, 'farReview')}
                         variant="accent"
-                        taskLabel={`📚 المراجعة البعيدة - ${task.farReview.description || `الجزء ${task.farReview.juzNumber}`}`}
+                        taskLabel={`📚 المراجعة البعيدة - ${task.farReview.description}`}
                       />
                     )}
 

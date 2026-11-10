@@ -2,8 +2,11 @@ import { UserSettings, DailyTask, VerseRange } from '@/types/schedule';
 import { 
   surahs, 
   juzs,
-  getSurahByPage, 
-  getSurahByNumber, 
+  getSurahByPage,
+  getSurahByNumber,
+  getJuzByPage,
+  getRubByPage,
+  getHizbByPage,
   TOTAL_PAGES,
   rubs,
   hizbs,
@@ -343,16 +346,18 @@ export const generateDailyTasks = (
     // للترتيب العادي (forward/backward)
     const surah = getSurahByNumber(farReviewCurrentSurah);
     if (!surah) return undefined;
-    
+
     const startVerse = farReviewCurrentVerse;
     const maxVerse = memorizationUnit === 'verses' ? surah.totalVerses : surah.totalPages;
     let endVerse = Math.min(startVerse + amount - 1, maxVerse);
-    
+
+    // لغير الآيات: نعرض أرقام الصفحات الفعلية في المصحف بدل الترقيم داخل السورة
+    const toAbsolute = memorizationUnit === 'verses' ? 0 : surah.startPage - 1;
     const range: VerseRange = {
       surahNumber: farReviewCurrentSurah,
       surahName: surah.arabicName,
-      startVerse,
-      endVerse
+      startVerse: startVerse + toAbsolute,
+      endVerse: endVerse + toAbsolute
     };
     
     // تحديث الموقع الحالي للمراجعة البعيدة
@@ -408,6 +413,115 @@ export const generateDailyTasks = (
     if (amount === 0.25) return `ربع الصفحة ${page}${s}`;
     if (amount === 0.75) return `ثلاثة أرباع الصفحة ${page}${s}`;
     return `جزء من الصفحة ${page}${s}`;
+  };
+
+  // ===== أدوات المراجعة بالوحدات (صفحات / أرباع / أحزاب) =====
+  const isUnitBased = memorizationUnit !== 'verses';
+
+  const pageToUnit = (page: number): number => {
+    if (memorizationUnit === 'rub') return getRubByPage(page)?.number || 1;
+    if (memorizationUnit === 'hizb') return getHizbByPage(page)?.number || 1;
+    return page;
+  };
+
+  // اسم السورة (أو السورتين) لنطاق صفحات — الصفحة قد تجمع آخر سورة وأول التالية
+  const surahLabelForPages = (startPage: number, endPage: number, minSurah = 1): string => {
+    const all = surahs.filter(s => s.startPage <= endPage && s.endPage >= startPage);
+    const filtered = all.filter(s => s.number >= minSurah);
+    const inRange = filtered.length > 0 ? filtered : all;
+    if (inRange.length === 0) return '';
+    if (inRange.length === 1) return inRange[0].arabicName;
+    return `${inRange[0].arabicName} - ${inRange[inRange.length - 1].arabicName}`;
+  };
+
+  // تحويل قائمة وحدات متتالية إلى نطاق صفحات
+  const rangeFromUnits = (units: number[]): VerseRange | undefined => {
+    if (units.length === 0) return undefined;
+    const startPage = getUnitPages(units[0])[0];
+    const lastPages = getUnitPages(units[units.length - 1]);
+    const endPage = lastPages[lastPages.length - 1];
+    if (!startPage || !endPage) return undefined;
+    return {
+      surahNumber: getSurahByPage(startPage)?.number || 1,
+      surahName: surahLabelForPages(startPage, endPage),
+      startVerse: startPage,
+      endVerse: endPage,
+    };
+  };
+
+  const pagesOfRange = (range?: VerseRange): number[] => {
+    if (!range || !isUnitBased) return [];
+    const pages: number[] = [];
+    for (let p = range.startVerse; p <= range.endVerse; p++) pages.push(p);
+    return pages;
+  };
+
+  const juzOfRange = (range?: VerseRange): number => {
+    if (!range) return 0;
+    const page = isUnitBased ? range.startVerse : (getSurahByNumber(range.surahNumber)?.startPage || 1);
+    return getJuzByPage(page)?.number || 0;
+  };
+
+  // اتجاه الحفظ: نفس القاعدة المستخدمة في الإعداد السريع (من جزء عمّ = من النهاية)
+  const isFromEnd = settings.currentSurahNumber >= 78;
+  const hasPriorMemorization = (settings.currentMemorizedPages || 0) > 0;
+  const startUnit = currentUnit;
+  const currentSurahData = getSurahByNumber(settings.currentSurahNumber);
+  // الحفظ الجديد يتقدم من السورة المختارة، فلا نذكر ما قبلها في الصفحة المشتركة
+  const newMemMinSurah = isFromEnd ? 1 : settings.currentSurahNumber;
+
+  // المراجعة القريبة = آخر N وحدة محفوظة قبل اليوم (من الحفظ السابق ثم الجديد)
+  // نبدأ بالوحدات المحفوظة قبل نقطة البداية حتى لا تكون المراجعة فارغة في الأيام الأولى
+  const recentUnits: number[] = [];
+  if (isUnitBased) {
+    const lowerBound = hasPriorMemorization && !isFromEnd
+      ? 1
+      : pageToUnit(currentSurahData?.startPage || startUnit);
+    const lookBack = Math.ceil(Math.max(settings.dailyNearReview, 1) * 2);
+    for (let u = Math.max(lowerBound, startUnit - lookBack); u < startUnit; u++) {
+      recentUnits.push(u);
+    }
+  }
+
+  // المراجعة البعيدة للحفظ السابق (الإعداد السريع): دورة على نطاق المحفوظ سابقاً
+  let farRegion: { start: number; end: number } | null = null;
+  if (isUnitBased && !hasMemoizedSurahs && hasPriorMemorization && settings.dailyFarReview > 0) {
+    const farSurah = getSurahByNumber(settings.farReviewSurahNumber);
+    if (isFromEnd) {
+      // المحفوظ سابقاً يقع بعد السورة الحالية
+      const afterCurrent = getSurahByNumber(settings.currentSurahNumber + 1);
+      const startPage = farSurah && currentSurahData && farSurah.number > currentSurahData.number
+        ? farSurah.startPage
+        : afterCurrent?.startPage;
+      if (startPage) farRegion = { start: pageToUnit(startPage), end: getMaxUnit() };
+    } else {
+      // المحفوظ سابقاً يقع قبل نقطة البداية
+      const startPage = farSurah && farSurah.startPage < (getUnitPages(startUnit)[0] || 1) ? farSurah.startPage : 1;
+      farRegion = { start: pageToUnit(startPage), end: startUnit - 1 };
+    }
+    if (farRegion && farRegion.end < farRegion.start) farRegion = null;
+  }
+  let farPointer = farRegion?.start || 0;
+
+  const nextFarRegionRange = (amount: number): VerseRange | undefined => {
+    if (!farRegion || amount <= 0) return undefined;
+    const count = Math.max(1, Math.ceil(amount));
+    const units: number[] = [];
+    for (let u = farPointer; u <= Math.min(farPointer + count - 1, farRegion.end); u++) units.push(u);
+    const last = units[units.length - 1];
+    farPointer = last >= farRegion.end ? farRegion.start : last + 1;
+    return rangeFromUnits(units);
+  };
+
+  // عدد أيام الحفظ في الأيام السبعة التالية (للتحضير الأسبوعي)
+  const countMemorizationDaysAfter = (date: Date): number => {
+    let count = 0;
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + i);
+      if (getMemorizationDays(d.getDay())) count++;
+    }
+    return count;
   };
 
   for (let day = 0; day < numberOfDays; day++) {
@@ -473,17 +587,32 @@ export const generateDailyTasks = (
     // أيام الراحة (مراجعة فقط): يتضاعف قدر المراجعة لاستغلال الوقت
     const isRestDay = !isMemorizationDay;
     const nearReviewAmount = isRestDay ? smartNearReview * 2 : smartNearReview;
-    const nearReviewRange = day === 0 ? undefined : buildRangeFromHistory(dayHistory[day - 1]);
+    let nearReviewRange: VerseRange | undefined;
+    if (nearReviewAmount <= 0) {
+      nearReviewRange = undefined;
+    } else if (isUnitBased) {
+      // آخر N وحدة محفوظة قبل اليوم (أيام الراحة لا تقطع المراجعة)
+      const count = Math.max(1, Math.ceil(nearReviewAmount));
+      nearReviewRange = rangeFromUnits(recentUnits.slice(-count));
+    } else {
+      // الآيات: آخر يوم فيه حفظ قبل اليوم
+      const lastEntry = [...dayHistory.slice(0, day)].reverse().find(e => e.verseRange);
+      nearReviewRange = buildRangeFromHistory(lastEntry);
+    }
+    // نضيف حفظ اليوم بعد حساب المراجعة حتى تُراجَع من الغد
+    recentUnits.push(...newMemUnits);
 
     // المراجعة البعيدة
     const farReviewAmount = isRestDay
       ? settings.dailyFarReview * 2
       : settings.dailyFarReview;
-    // بدون سور محفوظة مسبقاً: لا مراجعة بعيدة في الأسبوع الأول، ومن اليوم الثامن نراجع محفوظ قبل 7 أيام
+    // مع حفظ سابق: دورة على المحفوظ سابقاً. بدونه: من اليوم الثامن نراجع محفوظ قبل 7 أيام
     const farReviewRange = hasMemoizedSurahs
       ? calculateFarReviewRange(farReviewAmount)
+      : farRegion
+      ? nextFarRegionRange(farReviewAmount)
       : (day >= 7 && farReviewAmount > 0 ? buildRangeFromHistory(dayHistory[day - 7]) : undefined);
-    
+
     // التحضير للغد
     const prepPages: number[] = [];
     const prepAmount = (isWeekly && !customMemDays) ? Math.ceil(weeklyAmount / 2) : settings.dailyNewMemorization;
@@ -496,7 +625,10 @@ export const generateDailyTasks = (
     }
 
     // التحضير الأسبوعي - حساب النطاق للأسبوع القادم
-    const weeklyPrepAmount = Math.ceil(settings.dailyNewMemorization * 7);
+    // نحسب أيام الحفظ الفعلية فقط (بدون أيام الراحة)
+    const weeklyPrepAmount = Math.max(1, Math.ceil(
+      (isWeekly && !customMemDays ? weeklyAmount : settings.dailyNewMemorization * countMemorizationDaysAfter(taskDate))
+    ));
     const weeklyPrepStartUnit = currentUnit;
     const weeklyPrepEndUnit = Math.min(currentUnit + weeklyPrepAmount - 1, getMaxUnit());
     const weeklyPrepStartPage = memorizationUnit === 'pages' ? weeklyPrepStartUnit : (getUnitPages(weeklyPrepStartUnit)[0] || 1);
@@ -537,23 +669,27 @@ export const generateDailyTasks = (
       date: taskDate.toISOString().split('T')[0],
       dayNumber: day + 1,
       newMemorization: {
-        surahName: memorizationUnit === 'verses' 
+        surahName: isReviewOnlyDay
+          ? ''
+          : memorizationUnit === 'verses'
           ? (newMemVerseRange?.surahName || currentSurah?.arabicName || '')
+          : memorizationUnit === 'pages' && newMemPages.length > 0
+          ? surahLabelForPages(newMemPages[0], newMemPages[newMemPages.length - 1], newMemMinSurah)
           : (newMemSurah?.arabicName || currentSurah?.arabicName || ''),
         pages: newMemPages,
         unitLabel: isReviewOnlyDay
-          ? 'يوم مراجعة'
+          ? 'يوم راحة — لا حفظ جديد'
           : memorizationUnit === 'verses'
           ? formatVerseRangeLabel(newMemVerseRange)
           : memorizationUnit === 'pages' && newMemPages.length > 0
           ? (isDecimal
               ? getPageFractionLabel(newMemPages[0], dailyAmount, newMemSurah?.arabicName || '')
-              : `ص${newMemPages[0]}${newMemPages.length > 1 ? `-${newMemPages[newMemPages.length - 1]}` : ''} (${newMemSurah?.arabicName || ''})`)
+              : `ص${newMemPages[0]}${newMemPages.length > 1 ? `-${newMemPages[newMemPages.length - 1]}` : ''} (${surahLabelForPages(newMemPages[0], newMemPages[newMemPages.length - 1], newMemMinSurah)})`)
           : memorizationUnit === 'pages' && isDecimal && dailyAmount > 0
           ? getPageFractionLabel(unitAtStartOfDay, dailyAmount, newMemSurah?.arabicName || '')
           : formatUnitsRange(newMemUnits),
         description: isReviewOnlyDay
-          ? 'يوم مخصص للمراجعة فقط'
+          ? 'يوم راحة من الحفظ الجديد — ركّز على المراجعة'
           : memorizationUnit === 'verses'
           ? newMemVerseRange
             ? `حفظ ${newMemVerseRange.endVerse - newMemVerseRange.startVerse + 1} آيات من سورة ${newMemVerseRange.surahName}`
@@ -569,7 +705,7 @@ export const generateDailyTasks = (
       },
       nearReview: {
         surahName: nearReviewRange?.surahName || '',
-        pages: [],
+        pages: pagesOfRange(nearReviewRange),
         unitLabel: nearReviewRange
           ? (memorizationUnit === 'pages' && nearReviewAmount > 0 && nearReviewAmount < 1
               ? getPageFractionLabel(nearReviewRange.startVerse, nearReviewAmount, nearReviewRange.surahName)
@@ -587,8 +723,8 @@ export const generateDailyTasks = (
         verseRange: nearReviewRange,
       },
       farReview: {
-        pages: [],
-        juzNumber: 1,
+        pages: pagesOfRange(farReviewRange),
+        juzNumber: juzOfRange(farReviewRange),
         unitLabel: farReviewRange
           ? (memorizationUnit === 'pages' && farReviewAmount > 0 && farReviewAmount < 1
               ? getPageFractionLabel(farReviewRange.startVerse, farReviewAmount, farReviewRange.surahName)

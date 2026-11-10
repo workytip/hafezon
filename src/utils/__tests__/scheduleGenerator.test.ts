@@ -46,10 +46,17 @@ describe('الحفظ بالصفحات', () => {
     expect(tasks).toHaveLength(30);
   });
 
-  it('اليوم الأول: لا توجد مراجعة قريبة', () => {
-    const tasks = generateDailyTasks(baseSettings(), 7);
+  it('اليوم الأول من بداية السورة وبدون حفظ سابق: لا توجد مراجعة قريبة', () => {
+    const tasks = generateDailyTasks(baseSettings({ currentPageInSurah: 2 }), 7);
     expect(tasks[0].nearReview.verseRange).toBeUndefined();
     expect(tasks[0].nearReview.description).toContain('لا توجد');
+  });
+
+  it('اليوم الأول من منتصف السورة: نراجع الصفحات السابقة في نفس السورة', () => {
+    const tasks = generateDailyTasks(baseSettings({ dailyNearReview: 3 }), 7);
+    expect(tasks[0].nearReview.verseRange?.startVerse).toBe(22);
+    expect(tasks[0].nearReview.verseRange?.endVerse).toBe(24);
+    expect(tasks[0].nearReview.pages).toEqual([22, 23, 24]);
   });
 
   it('اليوم الثاني: المراجعة القريبة تساوي محفوظ اليوم الأول', () => {
@@ -124,9 +131,10 @@ describe('الحفظ بالأرباع', () => {
     expect(tasks).toHaveLength(30);
   });
 
-  it('اليوم الأول لا توجد مراجعة قريبة', () => {
+  it('اليوم الأول: المراجعة القريبة قبل موضع البداية', () => {
     const tasks = generateDailyTasks(rubSettings(), 5);
-    expect(tasks[0].nearReview.verseRange).toBeUndefined();
+    const startPage = tasks[0].newMemorization.pages[0];
+    expect(tasks[0].nearReview.verseRange!.endVerse).toBeLessThanOrEqual(startPage);
   });
 
   it('اليوم الثاني: المراجعة القريبة من ربع اليوم الأول', () => {
@@ -181,9 +189,10 @@ describe('الحفظ بالأحزاب', () => {
     });
   });
 
-  it('اليوم الأول لا مراجعة قريبة', () => {
+  it('اليوم الأول: المراجعة القريبة قبل موضع البداية', () => {
     const tasks = generateDailyTasks(hizbSettings(), 3);
-    expect(tasks[0].nearReview.verseRange).toBeUndefined();
+    const startPage = tasks[0].newMemorization.pages[0];
+    expect(tasks[0].nearReview.verseRange!.endVerse).toBeLessThanOrEqual(startPage);
   });
 
   it('المراجعة القريبة من اليوم الثاني', () => {
@@ -313,7 +322,7 @@ describe('وتيرة أسبوعية', () => {
     });
     midWeekTasks.forEach(t => {
       expect(t.newMemorization.pages).toHaveLength(0);
-      expect(t.newMemorization.unitLabel).toBe('يوم مراجعة');
+      expect(t.newMemorization.unitLabel).toBe('يوم راحة — لا حفظ جديد');
     });
   });
 });
@@ -452,7 +461,7 @@ describe('أيام الحفظ المخصصة', () => {
     });
     restTasks.forEach(t => {
       expect(t.newMemorization.pages).toHaveLength(0);
-      expect(t.newMemorization.unitLabel).toBe('يوم مراجعة');
+      expect(t.newMemorization.unitLabel).toBe('يوم راحة — لا حفظ جديد');
     });
     const memTasks = tasks.filter(t => {
       const d = new Date(t.date);
@@ -551,5 +560,59 @@ describe('اكتمال الجدول', () => {
       const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
       expect(diff).toBe(1);
     }
+  });
+});
+
+// ===== المراجعة مع حفظ سابق (الإعداد السريع) =====
+
+describe('المراجعة مع حفظ سابق وأيام راحة', () => {
+  // النحل ص1 (ص267)، صفحة يومياً، راحة الخميس والجمعة والسبت، 13 جزءاً محفوظاً
+  const s = () => baseSettings({
+    currentSurahNumber: 16,
+    currentPageInSurah: 267,
+    memorizationDays: [0, 1, 2, 3],
+    currentMemorizedPages: 260,
+    dailyNearReview: 8,
+    dailyFarReview: 8,
+    farReviewSurahNumber: 1,
+    startDate: '2026-07-31', // جمعة (يوم راحة)
+  });
+
+  it('المراجعة القريبة موجودة من اليوم الأول حتى في يوم الراحة', () => {
+    const tasks = generateDailyTasks(s(), 7);
+    tasks.forEach(t => expect(t.nearReview.pages.length).toBeGreaterThan(0));
+    expect(tasks[0].nearReview.verseRange!.endVerse).toBe(266);
+  });
+
+  it('المراجعة القريبة تشمل حفظ الأمس', () => {
+    const tasks = generateDailyTasks(s(), 7);
+    // الأحد 2 أغسطس حفظ ص267، الاثنين يراجعها
+    expect(tasks[3].nearReview.pages).toContain(267);
+  });
+
+  it('المراجعة البعيدة تبدأ من السورة المختارة وتعرض الجزء الصحيح', () => {
+    const tasks = generateDailyTasks(s(), 14);
+    expect(tasks[0].farReview.verseRange!.startVerse).toBe(1);
+    expect(tasks[0].farReview.juzNumber).toBe(1);
+    const juzs = new Set(tasks.map(t => t.farReview.juzNumber));
+    expect(juzs.size).toBeGreaterThan(1);
+    // لا تدخل المراجعة البعيدة في الحفظ الجديد
+    tasks.forEach(t => t.farReview.pages.forEach(p => expect(p).toBeLessThan(267)));
+  });
+
+  it('يوم الراحة لا يحمل اسم سورة في خانة الحفظ', () => {
+    const tasks = generateDailyTasks(s(), 3);
+    expect(tasks[0].newMemorization.surahName).toBe('');
+    expect(tasks[0].newMemorization.unitLabel).not.toContain('مراجعة');
+  });
+
+  it('الصفحة الأولى تُنسب للسورة المختارة لا للسورة السابقة', () => {
+    const tasks = generateDailyTasks(s(), 3);
+    expect(tasks[2].newMemorization.unitLabel).toBe('ص267 (النحل)');
+  });
+
+  it('التحضير الأسبوعي يحسب أيام الحفظ فقط', () => {
+    const tasks = generateDailyTasks(s(), 3);
+    expect(tasks[0].weeklyPreparation.totalUnits).toBe(4);
   });
 });

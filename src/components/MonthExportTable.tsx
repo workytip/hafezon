@@ -234,7 +234,7 @@ export const MonthExportTable = forwardRef<HTMLDivElement, MonthExportTableProps
                           <div>
                             <div style={{ fontWeight: 'bold', color: '#1a5f4a', fontSize: '13px' }}>{task.newMemorization.surahName}</div>
                             {task.newMemorization.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.newMemorization.unitLabel}</div>}
-                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.newMemorization.pages)}</div>
+                            {!task.newMemorization.unitLabel && <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.newMemorization.pages)}</div>}
                           </div>
                         </div>
                       </td>
@@ -244,7 +244,7 @@ export const MonthExportTable = forwardRef<HTMLDivElement, MonthExportTableProps
                           <div>
                             <div style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '13px' }}>{task.nearReview.surahName}</div>
                             {task.nearReview.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.nearReview.unitLabel}</div>}
-                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.nearReview.pages)}</div>
+                            {!task.nearReview.unitLabel && <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.nearReview.pages)}</div>}
                           </div>
                         </div>
                       </td>
@@ -252,9 +252,9 @@ export const MonthExportTable = forwardRef<HTMLDivElement, MonthExportTableProps
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
                           <Circle done={!!prog?.farReview} />
                           <div>
-                            <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '13px' }}>الجزء {task.farReview.juzNumber}</div>
+                            <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '13px' }}>{task.farReview.juzNumber > 0 ? `الجزء ${task.farReview.juzNumber}` : ''}</div>
                             {task.farReview.unitLabel && <div style={{ fontSize: '12px', color: '#444' }}>{task.farReview.unitLabel}</div>}
-                            <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.farReview.pages)}</div>
+                            {!task.farReview.unitLabel && <div style={{ fontSize: '11px', color: '#888' }}>{formatPages(task.farReview.pages)}</div>}
                           </div>
                         </div>
                       </td>

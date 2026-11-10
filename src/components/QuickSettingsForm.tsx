@@ -34,7 +34,7 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
     if (!initialSettings?.memorizationDays) return 0;
     return 7 - initialSettings.memorizationDays.length;
   });
-  const [dailyReview, setDailyReview] = useState<number>(initialSettings?.dailyNearReview ? initialSettings.dailyNearReview * 2 : 5);
+  const [dailyReview, setDailyReview] = useState<number>(initialSettings?.dailyNearReview || 5);
   const [hasFarReview, setHasFarReview] = useState<boolean>(initialSettings ? (initialSettings.dailyFarReview || 0) > 0 : false);
   const [farReviewSurahNumber, setFarReviewSurahNumber] = useState<number>(initialSettings?.farReviewSurahNumber || 1);
   const [memorizedJuzCount, setMemorizedJuzCount] = useState<number>(initialSettings ? Math.round(initialSettings.currentMemorizedPages / PAGES_PER_JUZ) : 0);
@@ -112,7 +112,7 @@ export const QuickSettingsForm = ({ onSubmit, onSwitchToFull, initialSettings }:
       memorizedSurahs: [],
       nearReviewSurahNumber: currentSurahNumber,
       nearReviewStartVerse: 1,
-      dailyNearReview: Math.ceil(dailyReview / 2),
+      dailyNearReview: dailyReview,
       nearReviewOrder: 'forward',
       farReviewSurahNumber: hasFarReview ? farReviewSurahNumber : currentSurahNumber,
       farReviewStartVerse: 1,
