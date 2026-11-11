@@ -1,4 +1,4 @@
-const CACHE = 'hafezon-v3';
+const CACHE = 'hafezon-v4';
 const BASE = '';
 
 self.addEventListener('install', event => {
@@ -20,11 +20,20 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  // Navigation requests → serve cached index.html for SPA offline support
+  // Navigation requests → network first so a new deploy is picked up right away
+  // (a stale cached index.html points to old assets that no longer exist → blank page).
+  // Falls back to the cached index.html when offline.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match(BASE + '/index.html')
-        .then(cached => cached || fetch(event.request))
+      fetch(event.request)
+        .then(res => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then(cache => cache.put(BASE + '/index.html', copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(BASE + '/index.html'))
     );
     return;
   }
