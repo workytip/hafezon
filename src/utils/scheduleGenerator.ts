@@ -17,6 +17,20 @@ import {
   TOTAL_VERSES
 } from '@/data/quranData';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const toDateString = (date: Date): string => date.toISOString().split('T')[0];
+const daysBetween = (from: string, to: string): number =>
+  Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
+
+// عدد أيام الجدول: 30 يوماً على الأقل، ويمتد ليشمل فترة المراجعة المكثفة وأسبوعاً بعدها
+export const getScheduleLength = (settings: UserSettings): number => {
+  const base = 30;
+  const ir = settings.intensiveReview;
+  if (!ir || ir.days <= 0) return base;
+  const end = daysBetween(settings.startDate, ir.startDate) + ir.days + 7;
+  return Math.min(Math.max(base, end), 180);
+};
+
 export const generateDailyTasks = (
   settings: UserSettings,
   numberOfDays: number = 30
@@ -513,13 +527,85 @@ export const generateDailyTasks = (
     return rangeFromUnits(units);
   };
 
+  // ===== فترة المراجعة المكثفة =====
+  const intensive = settings.intensiveReview && settings.intensiveReview.days > 0
+    ? settings.intensiveReview
+    : undefined;
+
+  // ترتيب اليوم داخل الفترة (يبدأ من 0)، أو -1 إن كان خارجها
+  const intensiveDayIndex = (date: Date): number => {
+    if (!intensive) return -1;
+    const diff = daysBetween(intensive.startDate, toDateString(date));
+    return diff >= 0 && diff < intensive.days ? diff : -1;
+  };
+
+  const isMemorizationDate = (date: Date): boolean =>
+    getMemorizationDays(date.getDay()) && intensiveDayIndex(date) === -1;
+
+  // كل الصفحات المحفوظة حتى الآن (السابق + الجديد) — تُقسَّم على أيام الفترة المكثفة
+  const memorizedPages = new Set<number>();
+  const addPageRange = (from: number, to: number) => {
+    for (let p = Math.max(1, from); p <= Math.min(TOTAL_PAGES, to); p++) memorizedPages.add(p);
+  };
+  const planStartPage = isUnitBased
+    ? (getUnitPages(startUnit)[0] || 1)
+    : (currentSurahData?.startPage || 1);
+  if (hasMemoizedSurahs) {
+    memorizedSurahs.forEach(n => {
+      const s = getSurahByNumber(n);
+      if (s) addPageRange(s.startPage, s.endPage);
+    });
+  } else if (hasPriorMemorization) {
+    if (isFromEnd) {
+      const next = getSurahByNumber(settings.currentSurahNumber + 1);
+      if (next) addPageRange(next.startPage, TOTAL_PAGES);
+    } else {
+      addPageRange(1, planStartPage - 1);
+    }
+  }
+  // ما سبق موضع البداية داخل السورة الحالية
+  if (currentSurahData) addPageRange(currentSurahData.startPage, planStartPage - 1);
+
+  const pageOfVerse = (surahNumber: number, verse: number): number => {
+    const s = getSurahByNumber(surahNumber);
+    if (!s) return 1;
+    return s.startPage + Math.floor(((verse - 1) / s.totalVerses) * s.totalPages);
+  };
+
+  let intensivePlan: number[][] | null = null;
+  const buildIntensivePlan = (days: number): number[][] => {
+    const all = [...memorizedPages].sort((a, b) => a - b);
+    const plan: number[][] = [];
+    for (let i = 0; i < days; i++) {
+      if (all.length === 0) plan.push([]);
+      else if (all.length >= days) {
+        plan.push(all.slice(Math.floor((i * all.length) / days), Math.floor(((i + 1) * all.length) / days)));
+      } else {
+        // المحفوظ أقل من عدد الأيام: صفحة يومياً مع التكرار
+        plan.push([all[i % all.length]]);
+      }
+    }
+    return plan;
+  };
+
+  // "ص1-20، ص25-30" للصفحات غير المتصلة
+  const formatPageRuns = (pages: number[]): string => {
+    const runs: [number, number][] = [];
+    pages.forEach(p => {
+      const last = runs[runs.length - 1];
+      if (last && p === last[1] + 1) last[1] = p;
+      else runs.push([p, p]);
+    });
+    return runs.map(([a, b]) => (a === b ? `ص${a}` : `ص${a}-${b}`)).join('، ');
+  };
+
   // عدد أيام الحفظ في الأيام السبعة التالية (للتحضير الأسبوعي)
   const countMemorizationDaysAfter = (date: Date): number => {
     let count = 0;
     for (let i = 1; i <= 7; i++) {
       const d = new Date(date);
       d.setDate(d.getDate() + i);
-      if (getMemorizationDays(d.getDay())) count++;
+      if (isMemorizationDate(d)) count++;
     }
     return count;
   };
@@ -528,7 +614,9 @@ export const generateDailyTasks = (
     const taskDate = new Date(startDate);
     taskDate.setDate(taskDate.getDate() + day);
     const dayOfWeek = taskDate.getDay();
-    const isMemorizationDay = getMemorizationDays(dayOfWeek);
+    const intensiveIndex = intensiveDayIndex(taskDate);
+    const isIntensiveDay = intensiveIndex >= 0;
+    const isMemorizationDay = !isIntensiveDay && getMemorizationDays(dayOfWeek);
     
     // الحفظ الجديد
     const newMemPages: number[] = [];
@@ -579,6 +667,11 @@ export const generateDailyTasks = (
     // تسجيل الحفظ في تاريخ الأيام (قبل حساب المراجعات)
     dayHistory.push({ pages: [...newMemPages], units: [...newMemUnits], verseRange: newMemVerseRange });
 
+    // تُبنى خطة الفترة المكثفة في أول أيامها من كل المحفوظ حتى تلك اللحظة
+    if (isIntensiveDay && !intensivePlan && intensive) {
+      intensivePlan = buildIntensivePlan(intensive.days);
+    }
+
     // المراجعة القريبة: اليوم الأول لا توجد، ومن اليوم الثاني نراجع ما حُفظ أمس
     // تحجيم ذكي: إذا كان الحفظ اليومي ضئيلاً، يكون قدر المراجعة مساوياً له
     const smartNearReview = settings.dailyNearReview === 0 ? 0
@@ -588,7 +681,7 @@ export const generateDailyTasks = (
     const isRestDay = !isMemorizationDay;
     const nearReviewAmount = isRestDay ? smartNearReview * 2 : smartNearReview;
     let nearReviewRange: VerseRange | undefined;
-    if (nearReviewAmount <= 0) {
+    if (nearReviewAmount <= 0 || isIntensiveDay) {
       nearReviewRange = undefined;
     } else if (isUnitBased) {
       // آخر N وحدة محفوظة قبل اليوم (أيام الراحة لا تقطع المراجعة)
@@ -601,13 +694,22 @@ export const generateDailyTasks = (
     }
     // نضيف حفظ اليوم بعد حساب المراجعة حتى تُراجَع من الغد
     recentUnits.push(...newMemUnits);
+    newMemPages.forEach(p => memorizedPages.add(p));
+    if (newMemVerseRange) {
+      addPageRange(
+        pageOfVerse(newMemVerseRange.surahNumber, newMemVerseRange.startVerse),
+        pageOfVerse(newMemVerseRange.surahNumber, newMemVerseRange.endVerse),
+      );
+    }
 
     // المراجعة البعيدة
     const farReviewAmount = isRestDay
       ? settings.dailyFarReview * 2
       : settings.dailyFarReview;
     // مع حفظ سابق: دورة على المحفوظ سابقاً. بدونه: من اليوم الثامن نراجع محفوظ قبل 7 أيام
-    const farReviewRange = hasMemoizedSurahs
+    const farReviewRange = isIntensiveDay
+      ? undefined
+      : hasMemoizedSurahs
       ? calculateFarReviewRange(farReviewAmount)
       : farRegion
       ? nextFarRegionRange(farReviewAmount)
@@ -626,8 +728,9 @@ export const generateDailyTasks = (
 
     // التحضير الأسبوعي - حساب النطاق للأسبوع القادم
     // نحسب أيام الحفظ الفعلية فقط (بدون أيام الراحة)
+    const memDaysAhead = countMemorizationDaysAfter(taskDate);
     const weeklyPrepAmount = Math.max(1, Math.ceil(
-      (isWeekly && !customMemDays ? weeklyAmount : settings.dailyNewMemorization * countMemorizationDaysAfter(taskDate))
+      (isWeekly && !customMemDays ? weeklyAmount : settings.dailyNewMemorization * memDaysAhead)
     ));
     const weeklyPrepStartUnit = currentUnit;
     const weeklyPrepEndUnit = Math.min(currentUnit + weeklyPrepAmount - 1, getMaxUnit());
@@ -665,7 +768,7 @@ export const generateDailyTasks = (
       }
     };
 
-    tasks.push({
+    const task: DailyTask = {
       date: taskDate.toISOString().split('T')[0],
       dayNumber: day + 1,
       newMemorization: {
@@ -754,7 +857,7 @@ export const generateDailyTasks = (
         description: memorizationUnit === 'verses'
           ? `استمع للآيات القادمة (${weeklyPrepAmount} آية)`
           : weeklyPrepStartSurah && weeklyPrepEndSurah
-          ? `ص${weeklyPrepStartPage}-${weeklyPrepEndPage} (${weeklyPrepStartSurah.arabicName}${weeklyPrepStartSurah.number !== weeklyPrepEndSurah.number ? ` - ${weeklyPrepEndSurah.arabicName}` : ''})`
+          ? `ص${weeklyPrepStartPage}${weeklyPrepEndPage !== weeklyPrepStartPage ? `-${weeklyPrepEndPage}` : ''} (${weeklyPrepStartSurah.arabicName}${weeklyPrepStartSurah.number !== weeklyPrepEndSurah.number ? ` - ${weeklyPrepEndSurah.arabicName}` : ''})`
           : `استمع أو اقرأ ${weeklyPrepAmount} ${getUnitLabelPlural()}`,
         totalUnits: weeklyPrepAmount,
       },
@@ -765,7 +868,45 @@ export const generateDailyTasks = (
         preparation: false,
         weeklyPreparation: false,
       },
-    });
+    };
+
+    if (isIntensiveDay && intensive && intensivePlan) {
+      const pages = intensivePlan[intensiveIndex];
+      const surahLabel = pages.length > 0 ? surahLabelForPages(pages[0], pages[pages.length - 1]) : '';
+      const pagesLabel = pages.length > 0 ? `${formatPageRuns(pages)} (${surahLabel})` : '';
+      const isLastDay = intensiveIndex === intensive.days - 1;
+
+      task.intensive = { day: intensiveIndex + 1, totalDays: intensive.days };
+      task.newMemorization = {
+        surahName: '',
+        pages: [],
+        unitLabel: `مراجعة مكثفة — يوم ${intensiveIndex + 1} من ${intensive.days}`,
+        description: 'فترة مراجعة مكثفة — لا حفظ جديد',
+      };
+      task.nearReview = {
+        surahName: '',
+        pages: [],
+        unitLabel: '',
+        description: 'لا توجد مراجعة قريبة — فترة مراجعة مكثفة',
+      };
+      task.farReview = {
+        pages,
+        juzNumber: pages.length > 0 ? getJuzByPage(pages[0])?.number || 0 : 0,
+        unitLabel: pagesLabel,
+        description: pages.length > 0
+          ? `مراجعة مكثفة: ${pages.length} صفحة — ${pagesLabel}`
+          : 'لا يوجد محفوظ للمراجعة',
+      };
+      // في آخر يوم نُبقي تحضير الغد استعداداً لاستئناف الحفظ
+      if (!isLastDay) {
+        task.tomorrowPreparation = { pages: [], description: 'لا يوجد تحضير — فترة مراجعة مكثفة' };
+      }
+    }
+    if (memDaysAhead === 0 && !(isWeekly && !customMemDays)) {
+      task.weeklyPreparation = { pages: [], description: 'لا يوجد — فترة مراجعة مكثفة', totalUnits: 0 };
+    }
+
+    tasks.push(task);
   }
   
   return tasks;

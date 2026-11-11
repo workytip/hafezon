@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { DailyTask } from '@/types/schedule';
+import { DailyTask, IntensiveReview, UserSettings } from '@/types/schedule';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { ExportTable } from './ExportTable';
 import { MonthExportTable } from './MonthExportTable';
 import { MiniPomodoro } from './MiniPomodoro';
+import { IntensiveReviewDialog } from './IntensiveReviewDialog';
 
 interface WeeklyScheduleProps {
   tasks: DailyTask[];
@@ -33,6 +34,8 @@ interface WeeklyScheduleProps {
   getDailyProgress: (date: string) => DailyTask['completed'];
   updateDailyProgress: (date: string, taskType: keyof DailyTask['completed'], completed: boolean, pagesDelta?: number) => void;
   addMemorizedPages?: (pages: number) => void;
+  settings?: UserSettings;
+  onIntensiveReviewChange?: (intensiveReview: IntensiveReview | null) => void;
   enabledStages?: {
     nearReview: boolean;
     farReview: boolean;
@@ -47,7 +50,9 @@ export const WeeklySchedule = ({
   onEditSettings,
   getDailyProgress,
   updateDailyProgress,
-  enabledStages = { nearReview: true, farReview: true, tomorrowPreparation: true, weeklyPreparation: true }
+  enabledStages = { nearReview: true, farReview: true, tomorrowPreparation: true, weeklyPreparation: true },
+  settings,
+  onIntensiveReviewChange,
 }: WeeklyScheduleProps) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
@@ -354,7 +359,10 @@ export const WeeklySchedule = ({
       {/* الرأس */}
       <div className="flex flex-col gap-4">
         {/* الصف الأول: أزرار الإعدادات */}
-        <div className="flex items-center gap-2 justify-end">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          {settings && onIntensiveReviewChange && (
+            <IntensiveReviewDialog settings={settings} onChange={onIntensiveReviewChange} />
+          )}
           <Button variant="outline" onClick={onEditSettings} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             تعديل الإعدادات
@@ -562,7 +570,7 @@ export const WeeklySchedule = ({
                     {enabledStages.farReview && (
                       <TaskItem
                         icon={<RefreshCw className="h-4 w-4" />}
-                        title="المراجعة البعيدة"
+                        title={task.intensive ? 'المراجعة المكثفة' : 'المراجعة البعيدة'}
                         description={task.farReview.unitLabel || task.farReview.description}
                         pages={task.farReview.pages}
                         completed={completion.farReview}

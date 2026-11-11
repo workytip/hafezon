@@ -3,8 +3,8 @@ import { SettingsForm } from '@/components/SettingsForm';
 import { QuickSettingsForm } from '@/components/QuickSettingsForm';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { ProgressRing } from '@/components/ProgressRing';
-import { UserSettings, DailyTask } from '@/types/schedule';
-import { generateDailyTasks } from '@/utils/scheduleGenerator';
+import { UserSettings, DailyTask, IntensiveReview } from '@/types/schedule';
+import { generateDailyTasks, getScheduleLength } from '@/utils/scheduleGenerator';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { BookOpen, RotateCcw, Zap, Sparkles, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,12 +23,24 @@ const Index = () => {
     }
   }, [isLoaded, progress]);
 
-  const handleSettingsSubmit = (newSettings: UserSettings) => {
+  const applySettings = (newSettings: UserSettings) => {
     setSettings(newSettings);
-    const generatedTasks = generateDailyTasks(newSettings, 30);
+    const generatedTasks = generateDailyTasks(newSettings, getScheduleLength(newSettings));
     setTasks(generatedTasks);
     saveProgress(newSettings, generatedTasks);
+  };
+
+  const handleSettingsSubmit = (newSettings: UserSettings) => {
+    // نماذج الإعداد لا تعرف فترة المراجعة المكثفة، فنحتفظ بها عند تعديل الإعدادات
+    const intensiveReview = newSettings.intensiveReview ?? progress?.settings?.intensiveReview;
+    applySettings(intensiveReview ? { ...newSettings, intensiveReview } : newSettings);
     setFormMode('choice'); // إعادة تعيين وضع النموذج بعد الحفظ
+  };
+
+  const handleIntensiveReviewChange = (intensiveReview: IntensiveReview | null) => {
+    if (!settings) return;
+    const { intensiveReview: _old, ...rest } = settings;
+    applySettings(intensiveReview ? { ...rest, intensiveReview } : rest);
   };
 
   const handleEditSettings = () => {
@@ -186,9 +198,12 @@ const Index = () => {
                 getDailyProgress={getDailyProgress}
                 updateDailyProgress={updateDailyProgress}
                 addMemorizedPages={addMemorizedPages}
+                settings={settings}
+                onIntensiveReviewChange={handleIntensiveReviewChange}
                 enabledStages={{
                   nearReview: settings.enableNearReview !== false,
-                  farReview: settings.enableFarReview !== false,
+                  // المراجعة المكثفة تظهر في خانة المراجعة البعيدة
+                  farReview: settings.enableFarReview !== false || !!settings.intensiveReview,
                   tomorrowPreparation: settings.enableTomorrowPreparation !== false,
                   weeklyPreparation: settings.enableWeeklyPreparation !== false,
                 }}

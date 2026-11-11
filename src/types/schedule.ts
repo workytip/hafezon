@@ -60,8 +60,17 @@ export interface UserSettings {
   memorizationDays?: number[];
   // تاريخ البدء
   startDate: string;
+  // فترة مراجعة مكثفة: بدون حفظ جديد، ويُقسَّم كل المحفوظ على أيام الفترة
+  intensiveReview?: IntensiveReview;
   // نوع الإعداد المستخدم
   setupMode?: 'quick' | 'full';
+}
+
+export interface IntensiveReview {
+  // أول يوم في الفترة (YYYY-MM-DD)
+  startDate: string;
+  // عدد أيام الفترة
+  days: number;
 }
 
 // نطاق الآيات
@@ -110,6 +119,11 @@ export interface DailyTask {
     pages: number[];
     description: string;
     totalUnits: number;
+  };
+  // يوم ضمن فترة المراجعة المكثفة
+  intensive?: {
+    day: number;
+    totalDays: number;
   };
   // هل تم إكمال المهام
   completed: {

@@ -616,3 +616,63 @@ describe('المراجعة مع حفظ سابق وأيام راحة', () => {
     expect(tasks[0].weeklyPreparation.totalUnits).toBe(4);
   });
 });
+
+// ===== فترة المراجعة المكثفة =====
+
+describe('فترة المراجعة المكثفة', () => {
+  const s = (days = 7) => baseSettings({
+    currentSurahNumber: 16,
+    currentPageInSurah: 267,
+    memorizationDays: [0, 1, 2, 3],
+    currentMemorizedPages: 260,
+    dailyNearReview: 8,
+    dailyFarReview: 8,
+    farReviewSurahNumber: 1,
+    startDate: '2026-07-31',
+    intensiveReview: { startDate: '2026-08-06', days },
+  });
+
+  const period = (tasks: ReturnType<typeof generateDailyTasks>) => tasks.filter(t => t.intensive);
+
+  it('لا حفظ جديد خلال الفترة', () => {
+    const tasks = generateDailyTasks(s(), 30);
+    const p = period(tasks);
+    expect(p).toHaveLength(7);
+    p.forEach(t => {
+      expect(t.newMemorization.pages).toHaveLength(0);
+      expect(t.newMemorization.unitLabel).toContain('مراجعة مكثفة');
+    });
+  });
+
+  it('تُراجع كل المحفوظ مرة واحدة خلال الفترة', () => {
+    const tasks = generateDailyTasks(s(), 30);
+    const pages = period(tasks).flatMap(t => t.farReview.pages);
+    // ص1-266 محفوظ سابقاً + ص267-270 حُفظت قبل الفترة
+    expect(pages).toEqual(Array.from({ length: 270 }, (_, i) => i + 1));
+  });
+
+  it('يُستأنف الحفظ من نفس الموضع بعد الفترة', () => {
+    const tasks = generateDailyTasks(s(), 30);
+    const after = tasks.filter(t => t.date > '2026-08-12' && t.newMemorization.pages.length > 0);
+    expect(after[0].newMemorization.pages[0]).toBe(271);
+  });
+
+  it('شهر كامل: مقدار يومي أصغر', () => {
+    const tasks = generateDailyTasks(s(30), 60);
+    const p = period(tasks);
+    expect(p).toHaveLength(30);
+    p.forEach(t => expect(t.farReview.pages.length).toBeLessThanOrEqual(10));
+  });
+
+  it('طول الجدول يشمل الفترة', async () => {
+    const { getScheduleLength } = await import('../scheduleGenerator');
+    expect(getScheduleLength(s(30))).toBeGreaterThanOrEqual(6 + 30);
+    expect(getScheduleLength(baseSettings())).toBe(30);
+  });
+
+  it('بدون فترة: الجدول لا يتغير', () => {
+    const { intensiveReview: _ir, ...rest } = s();
+    const tasks = generateDailyTasks(rest as UserSettings, 14);
+    expect(tasks.some(t => t.intensive)).toBe(false);
+  });
+});
